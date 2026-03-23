@@ -15,7 +15,7 @@
     <artifactId>Exodia-inventory</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>Exodia-inventory</name>
-    <description>Módulo de inventario para Exodia ERP</description>
+    <description>Microservicio de inventario para Exodia ERP</description>
 
     <properties>
         <java.version>21</java.version>

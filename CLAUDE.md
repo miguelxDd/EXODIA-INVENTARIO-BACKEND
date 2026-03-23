@@ -8,8 +8,9 @@
 
 ## Qué es esto
 
-Módulo de inventario del ERP **Exodia**. Trazabilidad basada en **contenedores** (código de barras)
-y **kardex de operaciones**. El stock NUNCA se persiste; siempre se calcula como
+**Microservicio de inventario** del ERP **Exodia**. Servicio independiente con BD propia (database-per-service).
+Trazabilidad basada en **contenedores** (código de barras) y **kardex de operaciones**.
+El stock NUNCA se persiste; siempre se calcula como
 `SUM(cantidad) FROM inv_operaciones WHERE activo = true`.
 
 ## Stack

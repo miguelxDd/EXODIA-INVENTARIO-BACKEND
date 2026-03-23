@@ -1,38 +1,19 @@
-# Arquitectura de Servicios Java — Módulo de Inventario
+# Arquitectura de Servicios Java — Microservicio de Inventario
 
 **Stack:** Java 21 (LTS) + Spring Boot 4.0.x + PostgreSQL 18 + Angular 21  
 **Build:** Maven  
-**Estilo arquitectónico:** Capas limpias con Domain Services  
-**Base de datos:** Modelo definido via Flyway migrations en `src/main/resources/db/migration/`
+**Estilo arquitectónico:** Microservicio con DDD pragmático + Capas limpias  
+**Base de datos:** Propia (database-per-service), migraciones Flyway en `src/main/resources/db/migration/`
 
 ---
 
-## 1. Estructura de módulos Maven
+## 1. Estructura del proyecto
 
-El inventario se construye como un módulo dentro de un proyecto multi-módulo o como un proyecto standalone. 
-La estructura recomendada es monorepo con módulos Maven:
-
-```
-exodia-erp/
-├── pom.xml                              (parent POM)
-├── exodia-common/                       (DTOs compartidos, utils, excepciones base)
-│   ├── pom.xml
-│   └── src/main/java/com/exodia/comun/
-├── exodia-security/                     (autenticación, JWT, contexto de usuario)
-│   ├── pom.xml
-│   └── src/main/java/com/exodia/seguridad/
-├── exodia-inventory/                    (MÓDULO DE INVENTARIO)
-│   ├── pom.xml
-│   └── src/main/java/com/exodia/inventario/
-└── exodia-app/                          (aplicación Spring Boot, punto de entrada)
-    ├── pom.xml
-    └── src/main/java/com/exodia/app/
-```
-
-Si el proyecto es standalone (solo inventario):
+El microservicio de inventario es un **proyecto Spring Boot standalone** con su propia base de datos,
+desplegable de forma independiente. No comparte BD ni código compilado con otros microservicios.
 
 ```
-exodia-inventory/
+exodia-inventario/
 ├── pom.xml
 └── src/
     ├── main/
@@ -41,14 +22,18 @@ exodia-inventory/
     │       ├── application.yml
     │       ├── application-dev.yml
     │       ├── application-prod.yml
-    │       └── db/migration/          (Flyway)
+    │       └── db/migration/          (Flyway — BD exclusiva de inventario)
     └── test/
         └── java/com/exodia/inventario/
 ```
 
+> **Nota:** Si otros microservicios necesitan DTOs o constantes compartidas,
+> se publican como artefacto Maven ligero (`exodia-inventario-api`) con solo
+> interfaces y records. Nunca se comparte código de dominio ni entidades.
+
 ---
 
-## 2. Estructura de paquetes del módulo de inventario
+## 2. Estructura de paquetes del microservicio de inventario
 
 ```
 com.exodia.inventario
@@ -346,7 +331,7 @@ com.exodia.inventario
 │   ├── CostSnapshotJob.java
 │   └── ReservationExpirationJob.java
 │
-├── integration/                     ── Integraciones con otros módulos
+├── integration/                     ── Integraciones con otros microservicios
 │   ├── purchasing/
 │   │   └── PurchaseOrderIntegration.java
 │   ├── sales/
@@ -363,7 +348,7 @@ com.exodia.inventario
 
 ---
 
-## 3. Dependencias Maven (pom.xml del módulo de inventario)
+## 3. Dependencias Maven (pom.xml del microservicio de inventario)
 
 ```xml
 <properties>
@@ -2103,7 +2088,7 @@ inventory:
 | Eventos | `event/` | 7 clases | Comunicación asíncrona interna |
 | Listeners | `listener/` | 3 clases | Reacción a eventos |
 | Schedulers | `scheduler/` | 4 clases | Tareas programadas |
-| Integraciones | `integration/` | 4 clases | Conexión con otros módulos |
+| Integraciones | `integration/` | 4 clases | Conexión con otros microservicios |
 | Config | `config/` | 4 clases | Configuración Spring |
 
 **Total estimado: ~175 archivos Java**

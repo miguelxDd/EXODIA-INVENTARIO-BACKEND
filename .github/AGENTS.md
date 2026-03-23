@@ -1,4 +1,4 @@
-﻿# AGENTS.md — Arquitectura y Estándares · Inventario Exodia ERP
+﻿# AGENTS.md — Arquitectura y Estándares · Microservicio de Inventario · Exodia ERP
 
 > **Fuente de verdad** para reglas, convenciones y decisiones arquitectónicas.
 > Todo agente o desarrollador DEBE leer este documento antes de escribir código.
@@ -36,16 +36,20 @@ Usamos **Domain-Driven Design táctico** donde agrega valor real, no como ceremo
 El inventario es un dominio complejo con invariantes de negocio críticas (stock consistente,
 trazabilidad, concurrencia), y DDD nos da herramientas concretas para protegerlas.
 
+**Arquitectura: Microservicios.** Cada bounded context del ERP Exodia es un microservicio
+independiente desplegado como su propio Spring Boot application con su propia base de datos
+(database-per-service). Este repositorio ES el microservicio de inventario.
+
 **Lo que SÍ adoptamos de DDD:**
 
-- **Bounded Context** → el módulo de inventario ES un bounded context con fronteras claras.
+- **Bounded Context = Microservicio** → el inventario es un servicio autónomo con su propia BD, desplegable independientemente.
 - **Aggregates** → cada concepto de negocio tiene un aggregate root que protege sus invariantes.
 - **Value Objects** → tipos semánticos para evitar errores con primitivos.
-- **Domain Events** → comunicación desacoplada entre aggregates y hacia otros módulos.
+- **Domain Events** → comunicación desacoplada entre aggregates y hacia otros microservicios.
 - **Ubiquitous Language** → todo el código usa el idioma del negocio (español).
 - **Repository per Aggregate** → un repositorio por aggregate root, no por tabla.
 - **Domain Services** → lógica que no pertenece a ningún aggregate específico.
-- **Anti-Corruption Layer** → adaptadores para integración con otros módulos del ERP.
+- **Anti-Corruption Layer** → adaptadores para integración con otros microservicios del ERP (vía REST/mensajería).
 - **Specifications** → reglas de negocio complejas encapsuladas como objetos.
 
 **Lo que NO hacemos (por pragmatismo):**
@@ -53,7 +57,7 @@ trazabilidad, concurrencia), y DDD nos da herramientas concretas para protegerla
 - NO hexagonal puro (ports & adapters). Spring Boot ES nuestra infraestructura y no la abstraemos.
 - NO event sourcing. El kardex de operaciones da trazabilidad sin la complejidad de ES.
 - NO CQRS completo con buses. Usamos CQRS lite: servicios separados de lectura y escritura.
-- NO bounded contexts separados por microservicio. Es un módulo dentro del monolito Exodia.
+- NO orquestación distribuida (Saga orchestrator). Los flujos críticos son locales al microservicio. La coordinación entre servicios usa coreografía basada en eventos.
 
 ### Principio rector
 
@@ -89,28 +93,32 @@ conversaciones. No hay sinónimos.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                  INVENTARIO (este módulo)                │
+│            INVENTARIO (este microservicio)               │
 │                                                         │
 │  Contenedores · Operaciones · Stock · Recepciones       │
 │  Transferencias · Ajustes · Picking · Conteos           │
 │  Reservas · Merma · Códigos de barras · Valorización    │
 │                                                         │
+│  BD propia: PostgreSQL (database-per-service)           │
+│                                                         │
 │  Entrada: producto_id, proveedor_id, cliente_id,        │
 │           orden_compra_id (IDs opacos — no entities)    │
 │                                                         │
-│  Salida: Domain Events hacia otros módulos              │
-│          API REST para Angular                          │
+│  Salida: Domain Events hacia otros microservicios       │
+│          API REST para Angular y otros servicios        │
 └─────────────────────────────────────────────────────────┘
-         │                      │
-    [ACL] ▼                [ACL] ▼
-┌──────────────┐     ┌─────────────────┐
-│   Compras    │     │  Contabilidad   │
-└──────────────┘     └─────────────────┘
+         │ REST/Mensajería          │ REST/Mensajería
+    [ACL] ▼                    [ACL] ▼
+┌──────────────┐     ┌─────────────────┐     ┌──────────────┐
+│   Compras    │     │  Contabilidad   │     │  Productos   │
+│ (microserv.) │     │  (microserv.)   │     │ (microserv.) │
+└──────────────┘     └─────────────────┘     └──────────────┘
 ```
 
 Las entidades externas (`Producto`, `Proveedor`, `Cliente`) se referencian **solo por ID** (Long).
-Inventario NUNCA importa entities de otros módulos. Si necesita datos de un producto, los recibe
-como parámetro del request o los obtiene vía un adapter de integración.
+Inventario NUNCA importa entities de otros microservicios. Si necesita datos de un producto, los recibe
+como parámetro del request o los obtiene vía un adapter de integración (llamada REST al microservicio
+de productos, con circuit breaker y fallback).
 
 ---
 
@@ -399,7 +407,7 @@ src/main/java/com/exodia/inventario/
 ├── infraestructura/               → CAPA DE INFRAESTRUCTURA
 │   ├── listener/                  → Event listeners (Spring)
 │   ├── programacion/              → @Scheduled tasks
-│   └── integracion/               → Anti-Corruption Layer hacia otros módulos
+│   └── integracion/               → Anti-Corruption Layer hacia otros microservicios
 │       ├── compras/
 │       ├── ventas/
 │       ├── produccion/
@@ -903,16 +911,27 @@ quién, cuándo, qué entidad, cuál fue el cambio.
 
 ## 21. Anti-Corruption Layer (Integraciones)
 
-Las integraciones con otros módulos del ERP (Compras, Ventas, Producción, Contabilidad)
+Las integraciones con otros microservicios del ERP (Compras, Ventas, Producción, Contabilidad, Productos)
 se implementan como **adapters** en `infraestructura/integracion/`.
+
+### Principio: comunicación inter-servicio
+
+- **Síncrona (REST)**: para consultas que necesitan respuesta inmediata (ej: obtener nombre de producto).
+  Usar `RestClient` de Spring 7 con circuit breaker (Resilience4j) y timeout.
+- **Asíncrona (eventos)**: para notificaciones que no necesitan respuesta (ej: inventario recibido → contabilidad).
+  Los eventos se publican localmente y un outbox/listener los envía al broker.
+- **Regla de oro**: si el servicio externo cae, el inventario DEBE seguir operando.
+  Los adapters retornan fallbacks seguros o cachean datos mínimos.
 
 ### Reglas de integración
 
-1. **Inventario NUNCA importa entities de otros módulos.** Solo IDs (Long).
-2. Si necesita datos de un producto, recibe un DTO o usa un adapter que encapsula la llamada.
+1. **Inventario NUNCA importa entities de otros microservicios.** Solo IDs (Long).
+2. Si necesita datos de un producto, recibe un DTO o usa un adapter que encapsula la llamada REST.
 3. Las integraciones usan **interfaces** definidas en `aplicacion/`. La implementación
    concreta vive en `infraestructura/integracion/`.
-4. Si el módulo externo no está disponible, el adapter lanza una excepción o retorna un default seguro.
+4. Si el microservicio externo no responde, el adapter retorna un fallback seguro o lanza excepción controlada.
+5. **Circuit breaker** obligatorio en toda llamada síncrona a otro microservicio.
+6. **Timeout**: máximo 3 segundos para llamadas síncronas inter-servicio.
 
 ```java
 // Interface en aplicacion/
@@ -924,7 +943,8 @@ public interface ProductoAdapter {
 // Implementación en infraestructura/integracion/
 @Component
 public class ProductoAdapterImpl implements ProductoAdapter {
-    // Llama al módulo de productos vía REST, evento, o query directo
+    private final RestClient restClient;
+    // Llama al microservicio de productos vía REST con circuit breaker
 }
 ```
 
@@ -995,7 +1015,7 @@ de PostgreSQL no son compatibles con H2.
 | 15 | Deducir stock sin lock pesimista | Condición de carrera → double-spending. |
 | 16 | `allowedOrigins("*")` en producción | CSRF abierto. |
 | 17 | Lógica de Spring en Domain Services | `domain/servicio/` es Java puro. |
-| 18 | Importar entities de otros módulos | Solo IDs. Anti-Corruption Layer. |
+| 18 | Importar entities de otros microservicios | Solo IDs. Anti-Corruption Layer via REST/eventos. |
 | 19 | Domain Event que modifica mismo aggregate | Ciclos y side-effects invisibles. |
 | 20 | Value Object mutable | VOs son records inmutables. |
 | 21 | Test de integración con H2 | Incompatible con queries nativos PostgreSQL. |
