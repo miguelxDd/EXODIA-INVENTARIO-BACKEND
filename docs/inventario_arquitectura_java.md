@@ -3,7 +3,7 @@
 **Stack:** Java 21 (LTS) + Spring Boot 4.0.x + PostgreSQL 18 + Angular 21  
 **Build:** Maven  
 **Estilo arquitectónico:** Capas limpias con Domain Services  
-**Base de datos:** Modelo definido en `inventario_ddl_postgresql_es.sql`
+**Base de datos:** Modelo definido via Flyway migrations en `src/main/resources/db/migration/`
 
 ---
 
@@ -13,37 +13,37 @@ El inventario se construye como un módulo dentro de un proyecto multi-módulo o
 La estructura recomendada es monorepo con módulos Maven:
 
 ```
-bilans-erp/
+exodia-erp/
 ├── pom.xml                              (parent POM)
-├── bilans-common/                       (DTOs compartidos, utils, excepciones base)
+├── exodia-common/                       (DTOs compartidos, utils, excepciones base)
 │   ├── pom.xml
-│   └── src/main/java/com/bilans/common/
-├── bilans-security/                     (autenticación, JWT, contexto de usuario)
+│   └── src/main/java/com/exodia/comun/
+├── exodia-security/                     (autenticación, JWT, contexto de usuario)
 │   ├── pom.xml
-│   └── src/main/java/com/bilans/security/
-├── bilans-inventory/                    (MÓDULO DE INVENTARIO)
+│   └── src/main/java/com/exodia/seguridad/
+├── exodia-inventory/                    (MÓDULO DE INVENTARIO)
 │   ├── pom.xml
-│   └── src/main/java/com/bilans/inventory/
-└── bilans-app/                          (aplicación Spring Boot, punto de entrada)
+│   └── src/main/java/com/exodia/inventario/
+└── exodia-app/                          (aplicación Spring Boot, punto de entrada)
     ├── pom.xml
-    └── src/main/java/com/bilans/app/
+    └── src/main/java/com/exodia/app/
 ```
 
 Si el proyecto es standalone (solo inventario):
 
 ```
-bilans-inventory/
+exodia-inventory/
 ├── pom.xml
 └── src/
     ├── main/
-    │   ├── java/com/bilans/inventory/
+    │   ├── java/com/exodia/inventario/
     │   └── resources/
     │       ├── application.yml
     │       ├── application-dev.yml
     │       ├── application-prod.yml
     │       └── db/migration/          (Flyway)
     └── test/
-        └── java/com/bilans/inventory/
+        └── java/com/exodia/inventario/
 ```
 
 ---
@@ -51,7 +51,7 @@ bilans-inventory/
 ## 2. Estructura de paquetes del módulo de inventario
 
 ```
-com.bilans.inventory
+com.exodia.inventario
 ├── config/                          ── Configuración Spring
 │   ├── InventoryConfig.java
 │   ├── JpaAuditConfig.java
@@ -498,7 +498,7 @@ com.bilans.inventory
 ### 4.1. BaseEntity.java
 
 ```java
-package com.bilans.inventory.domain.base;
+package com.exodia.inventario.domain.base;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -533,7 +533,7 @@ public abstract class BaseEntity implements Serializable {
 ### 4.2. AuditableEntity.java
 
 ```java
-package com.bilans.inventory.domain.base;
+package com.exodia.inventario.domain.base;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -577,9 +577,9 @@ public abstract class AuditableEntity extends BaseEntity {
 ### 5.1. Company.java
 
 ```java
-package com.bilans.inventory.domain.entity.catalog;
+package com.exodia.inventario.domain.entity.catalog;
 
-import com.bilans.inventory.domain.base.BaseEntity;
+import com.exodia.inventario.domain.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -627,9 +627,9 @@ public class Company extends BaseEntity {
 ### 5.2. Warehouse.java
 
 ```java
-package com.bilans.inventory.domain.entity.catalog;
+package com.exodia.inventario.domain.entity.catalog;
 
-import com.bilans.inventory.domain.base.AuditableEntity;
+import com.exodia.inventario.domain.base.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -690,10 +690,10 @@ public class Warehouse extends AuditableEntity {
 ### 5.3. WarehouseLocation.java
 
 ```java
-package com.bilans.inventory.domain.entity.catalog;
+package com.exodia.inventario.domain.entity.catalog;
 
-import com.bilans.inventory.domain.base.AuditableEntity;
-import com.bilans.inventory.domain.enums.LocationType;
+import com.exodia.inventario.domain.base.AuditableEntity;
+import com.exodia.inventario.domain.enums.LocationType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -734,9 +734,9 @@ public class WarehouseLocation extends AuditableEntity {
 ### 5.4. Unit.java
 
 ```java
-package com.bilans.inventory.domain.entity.catalog;
+package com.exodia.inventario.domain.entity.catalog;
 
-import com.bilans.inventory.domain.base.BaseEntity;
+import com.exodia.inventario.domain.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -791,10 +791,10 @@ public class Unit extends BaseEntity {
 ### 5.5. UnitConversion.java
 
 ```java
-package com.bilans.inventory.domain.entity.catalog;
+package com.exodia.inventario.domain.entity.catalog;
 
-import com.bilans.inventory.domain.base.BaseEntity;
-import com.bilans.inventory.domain.enums.ConversionOperationType;
+import com.exodia.inventario.domain.base.BaseEntity;
+import com.exodia.inventario.domain.enums.ConversionOperationType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -869,9 +869,9 @@ public class UnitConversion extends BaseEntity {
 ### 5.6. OperationType.java
 
 ```java
-package com.bilans.inventory.domain.entity.catalog;
+package com.exodia.inventario.domain.entity.catalog;
 
-import com.bilans.inventory.domain.base.BaseEntity;
+import com.exodia.inventario.domain.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -903,9 +903,9 @@ public class OperationType extends BaseEntity {
 ### 5.7. ContainerStatus.java
 
 ```java
-package com.bilans.inventory.domain.entity.catalog;
+package com.exodia.inventario.domain.entity.catalog;
 
-import com.bilans.inventory.domain.base.BaseEntity;
+import com.exodia.inventario.domain.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -939,10 +939,10 @@ public class ContainerStatus extends BaseEntity {
 ### 6.1. Container.java
 
 ```java
-package com.bilans.inventory.domain.entity.core;
+package com.exodia.inventario.domain.entity.core;
 
-import com.bilans.inventory.domain.base.AuditableEntity;
-import com.bilans.inventory.domain.entity.catalog.*;
+import com.exodia.inventario.domain.base.AuditableEntity;
+import com.exodia.inventario.domain.entity.catalog.*;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -1033,11 +1033,11 @@ public class Container extends AuditableEntity {
 ### 6.2. Operation.java
 
 ```java
-package com.bilans.inventory.domain.entity.core;
+package com.exodia.inventario.domain.entity.core;
 
-import com.bilans.inventory.domain.base.BaseEntity;
-import com.bilans.inventory.domain.entity.catalog.*;
-import com.bilans.inventory.domain.enums.ReferenceType;
+import com.exodia.inventario.domain.base.BaseEntity;
+import com.exodia.inventario.domain.entity.catalog.*;
+import com.exodia.inventario.domain.enums.ReferenceType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -1142,11 +1142,11 @@ public class Operation extends BaseEntity {
 ### 6.3. Reservation.java
 
 ```java
-package com.bilans.inventory.domain.entity.core;
+package com.exodia.inventario.domain.entity.core;
 
-import com.bilans.inventory.domain.base.BaseEntity;
-import com.bilans.inventory.domain.entity.catalog.*;
-import com.bilans.inventory.domain.enums.ReferenceType;
+import com.exodia.inventario.domain.base.BaseEntity;
+import com.exodia.inventario.domain.entity.catalog.*;
+import com.exodia.inventario.domain.enums.ReferenceType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -1238,7 +1238,7 @@ public class Reservation extends BaseEntity {
 ### 7.1. OperationTypeCode.java
 
 ```java
-package com.bilans.inventory.domain.enums;
+package com.exodia.inventario.domain.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -1270,7 +1270,7 @@ public enum OperationTypeCode {
 ### 7.2. ContainerStatusCode.java
 
 ```java
-package com.bilans.inventory.domain.enums;
+package com.exodia.inventario.domain.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -1340,11 +1340,11 @@ public enum TransferStatusCode {
 ### 8.1. OperationRepository.java
 
 ```java
-package com.bilans.inventory.repository.core;
+package com.exodia.inventario.repository.core;
 
-import com.bilans.inventory.domain.entity.core.Operation;
-import com.bilans.inventory.repository.projection.ContainerStockProjection;
-import com.bilans.inventory.repository.projection.ProductWarehouseStockProjection;
+import com.exodia.inventario.domain.entity.core.Operation;
+import com.exodia.inventario.repository.projection.ContainerStockProjection;
+import com.exodia.inventario.repository.projection.ProductWarehouseStockProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -1539,7 +1539,7 @@ public interface OperationRepository extends JpaRepository<Operation, Long> {
 
 ```java
 // ContainerStockProjection.java
-package com.bilans.inventory.repository.projection;
+package com.exodia.inventario.repository.projection;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -1567,7 +1567,7 @@ public interface ContainerStockProjection {
 }
 
 // ProductWarehouseStockProjection.java
-package com.bilans.inventory.repository.projection;
+package com.exodia.inventario.repository.projection;
 
 import java.math.BigDecimal;
 
@@ -1582,9 +1582,9 @@ public interface ProductWarehouseStockProjection {
 ### 8.3. ContainerRepository.java
 
 ```java
-package com.bilans.inventory.repository.core;
+package com.exodia.inventario.repository.core;
 
-import com.bilans.inventory.domain.entity.core.Container;
+import com.exodia.inventario.domain.entity.core.Container;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
@@ -1615,13 +1615,13 @@ public interface ContainerRepository
 ### 9.1. OperationService.java (servicio central de creación de operaciones)
 
 ```java
-package com.bilans.inventory.service.core;
+package com.exodia.inventario.service.core;
 
-import com.bilans.inventory.domain.entity.catalog.*;
-import com.bilans.inventory.domain.entity.core.*;
-import com.bilans.inventory.domain.enums.*;
-import com.bilans.inventory.repository.catalog.OperationTypeRepository;
-import com.bilans.inventory.repository.core.OperationRepository;
+import com.exodia.inventario.domain.entity.catalog.*;
+import com.exodia.inventario.domain.entity.core.*;
+import com.exodia.inventario.domain.enums.*;
+import com.exodia.inventario.repository.catalog.OperationTypeRepository;
+import com.exodia.inventario.repository.core.OperationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -1695,11 +1695,11 @@ public class OperationService {
 ### 9.2. StockQueryService.java
 
 ```java
-package com.bilans.inventory.service.core;
+package com.exodia.inventario.service.core;
 
-import com.bilans.inventory.repository.core.OperationRepository;
-import com.bilans.inventory.repository.projection.ContainerStockProjection;
-import com.bilans.inventory.repository.projection.ProductWarehouseStockProjection;
+import com.exodia.inventario.repository.core.OperationRepository;
+import com.exodia.inventario.repository.projection.ContainerStockProjection;
+import com.exodia.inventario.repository.projection.ProductWarehouseStockProjection;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -1745,7 +1745,7 @@ public class StockQueryService {
         return operationRepository.findStockByProductAndWarehouse(companyId, warehouseId, productId);
     }
 
-    public Page<com.bilans.inventory.domain.entity.core.Operation> getKardex(
+    public Page<com.exodia.inventario.domain.entity.core.Operation> getKardex(
             Long companyId, Long containerId, String barcode,
             Long productId, Long warehouseId,
             OffsetDateTime dateFrom, OffsetDateTime dateTo,
@@ -1765,20 +1765,20 @@ public class StockQueryService {
 ### 9.3. ReceiveInventoryService.java (ejemplo del flujo más importante)
 
 ```java
-package com.bilans.inventory.service.flow;
+package com.exodia.inventario.service.flow;
 
-import com.bilans.inventory.domain.entity.catalog.*;
-import com.bilans.inventory.domain.entity.core.*;
-import com.bilans.inventory.domain.entity.flow.*;
-import com.bilans.inventory.domain.enums.*;
-import com.bilans.inventory.dto.request.core.ReceiveInventoryRequest;
-import com.bilans.inventory.dto.request.core.ReceiveLineRequest;
-import com.bilans.inventory.event.InventoryReceivedEvent;
-import com.bilans.inventory.exception.*;
-import com.bilans.inventory.repository.catalog.*;
-import com.bilans.inventory.repository.core.*;
-import com.bilans.inventory.repository.flow.*;
-import com.bilans.inventory.service.core.*;
+import com.exodia.inventario.domain.entity.catalog.*;
+import com.exodia.inventario.domain.entity.core.*;
+import com.exodia.inventario.domain.entity.flow.*;
+import com.exodia.inventario.domain.enums.*;
+import com.exodia.inventario.dto.request.core.ReceiveInventoryRequest;
+import com.exodia.inventario.dto.request.core.ReceiveLineRequest;
+import com.exodia.inventario.event.InventoryReceivedEvent;
+import com.exodia.inventario.exception.*;
+import com.exodia.inventario.repository.catalog.*;
+import com.exodia.inventario.repository.core.*;
+import com.exodia.inventario.repository.flow.*;
+import com.exodia.inventario.service.core.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -2022,12 +2022,12 @@ Toda operación que modifique stock sigue este flujo invariable:
 ```yaml
 spring:
   application:
-    name: bilans-inventory
+    name: exodia-inventory
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/bilans_inventory
-    username: ${DB_USERNAME:bilans}
-    password: ${DB_PASSWORD:bilans}
+    url: jdbc:postgresql://localhost:5432/exodia_inventario
+    username: ${DB_USERNAME:exodia}
+    password: ${DB_PASSWORD:exodia}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
