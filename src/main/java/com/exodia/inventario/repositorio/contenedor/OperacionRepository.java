@@ -121,6 +121,29 @@ public interface OperacionRepository extends JpaRepository<Operacion, Long> {
             @Param("fechaHasta") OffsetDateTime fechaHasta,
             Pageable pageable);
 
+    // ── Costo promedio ponderado por producto + bodega (native) ───────────────────
+    @Query(value = """
+            SELECT COALESCE(
+                SUM(sub.precio_unitario * sub.stock) / NULLIF(SUM(sub.stock), 0),
+                0
+            )
+            FROM (
+                SELECT c.precio_unitario,
+                       COALESCE(SUM(o.cantidad), 0) AS stock
+                FROM inv_contenedores c
+                LEFT JOIN inv_operaciones o ON o.contenedor_id = c.id AND o.activo = true
+                WHERE c.empresa_id = :empresaId
+                  AND c.producto_id = :productoId
+                  AND c.bodega_id = :bodegaId
+                  AND c.activo = true
+                GROUP BY c.id, c.precio_unitario
+                HAVING COALESCE(SUM(o.cantidad), 0) > 0
+            ) sub
+            """, nativeQuery = true)
+    BigDecimal obtenerCostoPromedioPonderado(@Param("empresaId") Long empresaId,
+                                             @Param("productoId") Long productoId,
+                                             @Param("bodegaId") Long bodegaId);
+
     // ── Contenedores disponibles FEFO (native) ───────────────────────────────────
     @Query(value = """
             SELECT
@@ -131,12 +154,11 @@ public interface OperacionRepository extends JpaRepository<Operacion, Long> {
                 c.numero_lote AS numeroLote, c.fecha_vencimiento AS fechaVencimiento,
                 ec.codigo AS estadoCodigo,
                 COALESCE(SUM(o.cantidad), 0) AS stockCantidad,
-                COALESCE(SUM(o.cantidad), 0)
-                  - COALESCE((
-                      SELECT SUM(r.cantidad_reservada - r.cantidad_cumplida)
-                      FROM inv_reservas r
-                      WHERE r.contenedor_id = c.id AND r.estado IN ('PENDIENTE','PARCIAL')
-                  ), 0) AS cantidadReservada
+                COALESCE((
+                    SELECT SUM(r.cantidad_reservada - r.cantidad_cumplida)
+                    FROM inv_reservas r
+                    WHERE r.contenedor_id = c.id AND r.estado IN ('PENDIENTE','PARCIAL')
+                ), 0) AS cantidadReservada
             FROM inv_contenedores c
             JOIN inv_estados_contenedor ec ON ec.id = c.estado_id
             LEFT JOIN inv_operaciones o ON o.contenedor_id = c.id AND o.activo = true
@@ -149,6 +171,7 @@ public interface OperacionRepository extends JpaRepository<Operacion, Long> {
                    - COALESCE((SELECT SUM(r.cantidad_reservada - r.cantidad_cumplida)
                                FROM inv_reservas r WHERE r.contenedor_id = c.id
                                AND r.estado IN ('PENDIENTE','PARCIAL')), 0) > 0
+            -- cantidadDisponible = stockCantidad - cantidadReservada (calculada en ContenedorStockProjection)
             ORDER BY c.fecha_vencimiento ASC NULLS LAST, c.creado_en ASC
             """, nativeQuery = true)
     List<ContenedorStockProjection> findContenedoresDisponiblesFEFO(

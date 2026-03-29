@@ -41,6 +41,9 @@ public class TransferenciaLinea extends EntidadBase {
     @JoinColumn(name = "unidad_id", nullable = false)
     private Unidad unidad;
 
+    @Column(name = "contenedor_id")
+    private Long contenedorId;
+
     @Column(name = "cantidad_solicitada", nullable = false, precision = 18, scale = 6)
     private BigDecimal cantidadSolicitada;
 

@@ -39,8 +39,15 @@ public class TransferenciaContenedor extends EntidadBase {
     @JoinColumn(name = "contenedor_id", nullable = false)
     private Contenedor contenedor;
 
+    @Column(name = "transferencia_linea_id")
+    private Long transferenciaLineaId;
+
     @Column(name = "cantidad", nullable = false, precision = 18, scale = 6)
     private BigDecimal cantidad;
+
+    @Column(name = "cantidad_recibida", precision = 18, scale = 6)
+    @Builder.Default
+    private BigDecimal cantidadRecibida = BigDecimal.ZERO;
 
     @Column(name = "recibido", nullable = false)
     @Builder.Default

@@ -463,9 +463,9 @@ src/main/java/com/exodia/inventario/
 | Specification | PascalCase + `Politica` | `PoliticaDeduccionStock` |
 | Tabla BD | `inv_` + snake_case, plural, español | `inv_contenedores` |
 | Columna BD | snake_case, español | `codigo_barras`, `precio_unitario` |
-| Índice BD | `idx_` + tabla + columnas | `idx_operaciones_contenedor_activo` |
-| Unique BD | `uq_` + tabla + columnas | `uq_contenedores_empresa_barcode` |
-| FK BD | `fk_` + tabla_origen + tabla_destino | `fk_contenedores_bodega` |
+| Índice BD | `idx_` + tabla_singular + columnas | `idx_operacion_contenedor`, `idx_contenedor_fefo` |
+| Unique BD | `uq_` + tabla_singular + columnas | `uq_contenedor_empresa_codigo_barras` |
+| FK BD | `fk_` + tabla_singular_origen + destino | `fk_bodega_ubicacion_standby` |
 | URL REST | kebab-case, plural, español | `/api/v1/recepciones` |
 | Método | camelCase, verbo primero | `crearRecepcion()`, `obtenerStock()` |
 | Constante | UPPER_SNAKE_CASE | `MAX_RESULTADOS_PAGINA` |
@@ -701,7 +701,7 @@ Todo en español. Tablas prefijadas con `inv_`. Esquema: `public` (default Postg
 - Unique constraints DEBEN ser **partial indexes** para funcionar con soft delete:
 
 ```sql
-CREATE UNIQUE INDEX uq_contenedores_empresa_barcode
+CREATE UNIQUE INDEX uq_contenedor_empresa_codigo_barras
     ON inv_contenedores (empresa_id, codigo_barras)
     WHERE activo = true;
 ```
@@ -712,10 +712,10 @@ CREATE UNIQUE INDEX uq_contenedores_empresa_barcode
 |------|--------|--------|
 | PK | Automático (`id BIGSERIAL`) | — |
 | FK | Toda FK. PostgreSQL NO los crea automáticamente. | `idx_{tabla}_{columna_fk}` |
-| Stock queries | `inv_operaciones(contenedor_id, activo)` y `(producto_id, bodega_id, empresa_id, activo)` | `idx_operaciones_contenedor_activo` |
-| Barcode | Partial unique `inv_contenedores(empresa_id, codigo_barras) WHERE activo = true` | `uq_contenedores_empresa_barcode` |
-| FEFO | `inv_contenedores(producto_id, bodega_id, fecha_vencimiento, creado_en) WHERE activo = true` | `idx_contenedores_fefo` |
-| Kardex | `inv_operaciones(empresa_id, fecha_operacion DESC, id DESC)` | `idx_operaciones_kardex` |
+| Stock queries | `inv_operaciones(contenedor_id, activo)` y `(empresa_id, producto_id, bodega_id, activo)` | `idx_operacion_contenedor`, `idx_operacion_stock_por_producto_bodega` |
+| Barcode | Partial unique `inv_contenedores(empresa_id, codigo_barras) WHERE activo = true` | `uq_contenedor_empresa_codigo_barras` |
+| FEFO | `inv_contenedores(producto_id, bodega_id, fecha_vencimiento, creado_en) WHERE activo = true` | `idx_contenedor_fefo` |
+| Kardex | `inv_operaciones(empresa_id, fecha_operacion DESC, id DESC)` | `idx_operacion_kardex` |
 
 ### 15.4. Migraciones Flyway
 

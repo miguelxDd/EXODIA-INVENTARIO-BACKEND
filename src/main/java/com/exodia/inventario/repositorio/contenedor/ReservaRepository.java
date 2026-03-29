@@ -7,12 +7,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Repository
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
 
     List<Reserva> findByContenedorIdAndEstadoIn(Long contenedorId, List<String> estados);
+
+    List<Reserva> findByContenedorIdAndEmpresaIdAndEstadoIn(Long contenedorId, Long empresaId, List<String> estados);
+
+    List<Reserva> findByEstadoInAndFechaExpiracionBefore(List<String> estados, OffsetDateTime fecha);
 
     @Query("""
             SELECT COALESCE(SUM(r.cantidadReservada - r.cantidadCumplida), 0)
