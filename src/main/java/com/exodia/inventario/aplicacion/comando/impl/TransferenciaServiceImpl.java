@@ -21,6 +21,7 @@ import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Operacion;
 import com.exodia.inventario.domain.modelo.transferencia.Transferencia;
 import com.exodia.inventario.domain.modelo.transferencia.TransferenciaContenedor;
+import com.exodia.inventario.domain.modelo.transferencia.TransferenciaContenedorEntrada;
 import com.exodia.inventario.domain.modelo.transferencia.TransferenciaLinea;
 import com.exodia.inventario.domain.politica.PoliticaDeduccionStock;
 import com.exodia.inventario.domain.servicio.PoliticaFEFO;
@@ -306,6 +307,15 @@ public class TransferenciaServiceImpl implements TransferenciaService {
                     TipoReferencia.TRANSFERENCIA,
                     transferencia.getId(),
                     tc.getId());
+
+            // Registrar entrada en historial de recepciones parciales
+            TransferenciaContenedorEntrada entrada = TransferenciaContenedorEntrada.builder()
+                    .transferenciaContenedor(tc)
+                    .operacionEntrada(opEntrada)
+                    .cantidadRecibida(cantidadRecibida)
+                    .contenedorDestino(contenedorDestino)
+                    .build();
+            tc.getEntradas().add(entrada);
 
             // Acumular cantidad recibida; marcar recibido solo si se cubrió todo
             tc.setCantidadRecibida(tc.getCantidadRecibida().add(cantidadRecibida));

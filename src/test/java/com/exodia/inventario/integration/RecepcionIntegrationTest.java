@@ -73,7 +73,7 @@ class RecepcionIntegrationTest extends BaseIntegrationTest {
                         "unidadId": %d,
                         "ubicacionId": %d,
                         "cantidad": 25,
-                        "costoUnitario": 10.00
+                        "precioUnitario": 10.00
                     }]
                 }
                 """, bodegaId, unidadId, ubicacionId);
@@ -99,7 +99,7 @@ class RecepcionIntegrationTest extends BaseIntegrationTest {
                         "unidadId": %d,
                         "ubicacionId": %d,
                         "cantidad": 50,
-                        "costoUnitario": 5.00
+                        "precioUnitario": 5.00
                     }]
                 }
                 """, bodegaId, unidadId, ubicacionId);
@@ -113,8 +113,8 @@ class RecepcionIntegrationTest extends BaseIntegrationTest {
         // Consultar stock consolidado
         mockMvc.perform(get("/api/v1/inventario/stock/consolidado")
                         .header("X-Empresa-Id", empresaId)
-                        .param("page", "0")
-                        .param("size", "20"))
+                        .param("pagina", "0")
+                        .param("tamanio", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.exito").value(true));
 
@@ -137,7 +137,7 @@ class RecepcionIntegrationTest extends BaseIntegrationTest {
                         "unidadId": %d,
                         "ubicacionId": %d,
                         "cantidad": 10,
-                        "costoUnitario": 20.00
+                        "precioUnitario": 20.00
                     }]
                 }
                 """, bodegaId, unidadId, ubicacionId);
@@ -151,8 +151,8 @@ class RecepcionIntegrationTest extends BaseIntegrationTest {
         // Consultar kardex
         mockMvc.perform(get("/api/v1/inventario/kardex")
                         .header("X-Empresa-Id", empresaId)
-                        .param("page", "0")
-                        .param("size", "20"))
+                        .param("pagina", "0")
+                        .param("tamanio", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.exito").value(true));
     }
@@ -168,7 +168,7 @@ class RecepcionIntegrationTest extends BaseIntegrationTest {
                         "unidadId": %d,
                         "ubicacionId": %d,
                         "cantidad": 10,
-                        "costoUnitario": 5.00
+                        "precioUnitario": 5.00
                     }]
                 }
                 """, unidadId, ubicacionId);

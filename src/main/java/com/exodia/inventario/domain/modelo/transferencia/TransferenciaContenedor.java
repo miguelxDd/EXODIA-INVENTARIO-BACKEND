@@ -2,16 +2,20 @@ package com.exodia.inventario.domain.modelo.transferencia;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.exodia.inventario.domain.base.EntidadBase;
 import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Operacion;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -57,9 +61,17 @@ public class TransferenciaContenedor extends EntidadBase {
     @JoinColumn(name = "operacion_salida_id")
     private Operacion operacionSalida;
 
+    /**
+     * Ultima operacion de entrada (backward compat con esquema original).
+     * Para trazabilidad completa de recepciones parciales, usar {@link #entradas}.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "operacion_entrada_id")
     private Operacion operacionEntrada;
+
+    @OneToMany(mappedBy = "transferenciaContenedor", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TransferenciaContenedorEntrada> entradas = new ArrayList<>();
 
     @Column(name = "creado_en", updatable = false)
     private OffsetDateTime creadoEn;
