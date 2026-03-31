@@ -96,6 +96,18 @@ public interface StockQueryService {
                                                                        Long bodegaId);
 
     /**
+     * Obtiene contenedores disponibles ordenados por FIFO para picking.
+     *
+     * @param empresaId  ID de la empresa
+     * @param productoId ID del producto
+     * @param bodegaId   ID de la bodega
+     * @return contenedores con stock disponible, ordenados por fecha de creacion ASC
+     */
+    List<ContenedorStockProjection> obtenerContenedoresDisponiblesFIFO(Long empresaId,
+                                                                       Long productoId,
+                                                                       Long bodegaId);
+
+    /**
      * Obtiene el costo promedio ponderado de un producto en una bodega.
      * Se calcula como SUM(precioUnitario * stock) / SUM(stock) sobre contenedores con stock > 0.
      *

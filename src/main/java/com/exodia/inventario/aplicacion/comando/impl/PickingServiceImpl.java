@@ -1,6 +1,7 @@
 package com.exodia.inventario.aplicacion.comando.impl;
 
 import com.exodia.inventario.aplicacion.comando.BarcodeService;
+import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.PickingService;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
@@ -14,6 +15,7 @@ import com.exodia.inventario.domain.modelo.catalogo.EstadoContenedor;
 import com.exodia.inventario.domain.modelo.catalogo.Unidad;
 import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Operacion;
+import com.exodia.inventario.domain.modelo.extension.ConfiguracionEmpresa;
 import com.exodia.inventario.domain.modelo.picking.OrdenPicking;
 import com.exodia.inventario.domain.modelo.picking.PickingLinea;
 import com.exodia.inventario.domain.politica.PoliticaDeduccionStock;
@@ -58,6 +60,7 @@ public class PickingServiceImpl implements PickingService {
     private final OperacionService operacionService;
     private final StockQueryService stockQueryService;
     private final BarcodeService barcodeService;
+    private final ConfiguracionEmpresaService configuracionEmpresaService;
     private final PoliticaFEFO politicaFEFO;
     private final PoliticaDeduccionStock politicaDeduccionStock;
     private final PickingMapeador pickingMapeador;
@@ -182,9 +185,14 @@ public class PickingServiceImpl implements PickingService {
         Long bodegaId = orden.getBodega().getId();
         Long empresaId = orden.getEmpresa().getId();
 
-        // Obtener contenedores disponibles FEFO
-        List<ContenedorStockProjection> disponibles = stockQueryService
-                .obtenerContenedoresDisponiblesFEFO(empresaId, linea.getProductoId(), bodegaId);
+        // Consultar politica de salida configurada
+        ConfiguracionEmpresa configEmpresa = configuracionEmpresaService.obtenerEntidadOCrear(empresaId);
+        String politica = configEmpresa.getPoliticaSalida();
+
+        // Obtener contenedores disponibles segun politica
+        List<ContenedorStockProjection> disponibles = "FIFO".equals(politica)
+                ? stockQueryService.obtenerContenedoresDisponiblesFIFO(empresaId, linea.getProductoId(), bodegaId)
+                : stockQueryService.obtenerContenedoresDisponiblesFEFO(empresaId, linea.getProductoId(), bodegaId);
 
         List<PoliticaFEFO.ContenedorConStock> contenedoresConStock = disponibles.stream()
                 .map(p -> new PoliticaFEFO.ContenedorConStock(

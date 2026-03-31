@@ -16,6 +16,7 @@ import com.exodia.inventario.interfaz.dto.peticion.CrearMermaRequest;
 import com.exodia.inventario.interfaz.dto.respuesta.MermaResponse;
 import com.exodia.inventario.interfaz.mapeador.MermaMapeador;
 import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
+import com.exodia.inventario.repositorio.extension.ConfigMermaRepository;
 import com.exodia.inventario.repositorio.extension.RegistroMermaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.*;
 class MermaServiceTest {
 
     @Mock private RegistroMermaRepository registroMermaRepository;
+    @Mock private ConfigMermaRepository configMermaRepository;
     @Mock private ContenedorRepository contenedorRepository;
     @Mock private OperacionService operacionService;
     @Mock private StockQueryService stockQueryService;

@@ -8,6 +8,7 @@ import com.exodia.inventario.domain.enums.TipoOperacionCodigo;
 import com.exodia.inventario.domain.enums.TipoReferencia;
 import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Operacion;
+import com.exodia.inventario.domain.modelo.extension.ConfigMerma;
 import com.exodia.inventario.domain.modelo.extension.RegistroMerma;
 import com.exodia.inventario.domain.politica.PoliticaDeduccionStock;
 import com.exodia.inventario.excepcion.EntidadNoEncontradaException;
@@ -16,6 +17,7 @@ import com.exodia.inventario.interfaz.dto.peticion.CrearMermaRequest;
 import com.exodia.inventario.interfaz.dto.respuesta.MermaResponse;
 import com.exodia.inventario.interfaz.mapeador.MermaMapeador;
 import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
+import com.exodia.inventario.repositorio.extension.ConfigMermaRepository;
 import com.exodia.inventario.repositorio.extension.RegistroMermaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,7 @@ import java.math.BigDecimal;
 public class MermaServiceImpl implements MermaService {
 
     private final RegistroMermaRepository registroMermaRepository;
+    private final ConfigMermaRepository configMermaRepository;
     private final ContenedorRepository contenedorRepository;
     private final OperacionService operacionService;
     private final StockQueryService stockQueryService;
@@ -56,6 +59,15 @@ public class MermaServiceImpl implements MermaService {
                     contenedor.getId(), request.cantidadMerma(), stockDisponible);
         }
 
+        // Buscar configuracion de merma aplicable (empresa+producto+bodega)
+        ConfigMerma configMerma = buscarConfigMermaAplicable(
+                empresaId, contenedor.getProductoId(),
+                contenedor.getBodega() != null ? contenedor.getBodega().getId() : null);
+
+        if (configMerma != null) {
+            validarMermaContraConfig(configMerma, request.cantidadMerma(), stockDisponible);
+        }
+
         Operacion operacion = operacionService.crearOperacion(
                 contenedor,
                 TipoOperacionCodigo.MERMA,
@@ -68,6 +80,7 @@ public class MermaServiceImpl implements MermaService {
                 .cantidadMerma(request.cantidadMerma())
                 .tipoMerma(TipoMerma.MANUAL)
                 .operacion(operacion)
+                .configMerma(configMerma)
                 .comentarios(request.comentarios())
                 .build();
 
@@ -93,5 +106,36 @@ public class MermaServiceImpl implements MermaService {
     public Page<MermaResponse> listarPorEmpresa(Long empresaId, Pageable pageable) {
         return registroMermaRepository.findByEmpresaId(empresaId, pageable)
                 .map(mermaMapeador::toResponse);
+    }
+
+    private ConfigMerma buscarConfigMermaAplicable(Long empresaId, Long productoId, Long bodegaId) {
+        // Buscar config especifica (empresa+producto+bodega)
+        return configMermaRepository.findFirstByEmpresaIdAndActivoTrueAndProductoIdAndBodegaId(
+                        empresaId, productoId, bodegaId)
+                // Fallback: config por producto sin bodega
+                .or(() -> configMermaRepository.findFirstByEmpresaIdAndActivoTrueAndProductoIdAndBodegaId(
+                        empresaId, productoId, null))
+                // Fallback: config global de empresa
+                .or(() -> configMermaRepository.findFirstByEmpresaIdAndActivoTrueAndProductoIdAndBodegaId(
+                        empresaId, null, null))
+                .orElse(null);
+    }
+
+    private void validarMermaContraConfig(ConfigMerma config, BigDecimal cantidadMerma,
+                                            BigDecimal stockDisponible) {
+        if (config.getPorcentajeMerma() != null && stockDisponible.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal limitePorc = stockDisponible.multiply(config.getPorcentajeMerma())
+                    .divide(BigDecimal.valueOf(100), 6, java.math.RoundingMode.HALF_UP);
+            if (cantidadMerma.compareTo(limitePorc) > 0) {
+                log.warn("Merma ({}) excede el porcentaje configurado ({}% = {}) para config {}",
+                        cantidadMerma, config.getPorcentajeMerma(), limitePorc, config.getId());
+            }
+        }
+        if (config.getCantidadFijaMerma() != null) {
+            if (cantidadMerma.compareTo(config.getCantidadFijaMerma()) > 0) {
+                log.warn("Merma ({}) excede la cantidad fija configurada ({}) para config {}",
+                        cantidadMerma, config.getCantidadFijaMerma(), config.getId());
+            }
+        }
     }
 }

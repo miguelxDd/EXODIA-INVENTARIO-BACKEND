@@ -1,6 +1,7 @@
 package com.exodia.inventario.unit.aplicacion.comando;
 
 import com.exodia.inventario.aplicacion.comando.BarcodeService;
+import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.impl.PickingServiceImpl;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
@@ -16,6 +17,7 @@ import com.exodia.inventario.interfaz.dto.respuesta.OrdenPickingResponse;
 import com.exodia.inventario.interfaz.mapeador.PickingMapeador;
 import com.exodia.inventario.repositorio.catalogo.BodegaRepository;
 import com.exodia.inventario.repositorio.catalogo.EmpresaRepository;
+import com.exodia.inventario.repositorio.catalogo.EstadoContenedorRepository;
 import com.exodia.inventario.repositorio.catalogo.UnidadRepository;
 import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
 import com.exodia.inventario.repositorio.picking.OrdenPickingRepository;
@@ -46,9 +48,11 @@ class PickingServiceTest {
     @Mock private BodegaRepository bodegaRepository;
     @Mock private UnidadRepository unidadRepository;
     @Mock private ContenedorRepository contenedorRepository;
+    @Mock private EstadoContenedorRepository estadoContenedorRepository;
     @Mock private OperacionService operacionService;
     @Mock private StockQueryService stockQueryService;
     @Mock private BarcodeService barcodeService;
+    @Mock private ConfiguracionEmpresaService configuracionEmpresaService;
     @Mock private PoliticaFEFO politicaFEFO;
     @Mock private PoliticaDeduccionStock politicaDeduccionStock;
     @Mock private PickingMapeador pickingMapeador;

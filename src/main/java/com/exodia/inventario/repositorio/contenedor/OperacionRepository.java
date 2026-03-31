@@ -178,4 +178,38 @@ public interface OperacionRepository extends JpaRepository<Operacion, Long> {
             @Param("empresaId") Long empresaId,
             @Param("productoId") Long productoId,
             @Param("bodegaId") Long bodegaId);
+
+    // ── Contenedores disponibles FIFO (native) ───────────────────────────────────
+    @Query(value = """
+            SELECT
+                c.id AS contenedorId, c.codigo_barras AS codigoBarras,
+                c.producto_id AS productoId, c.proveedor_id AS proveedorId,
+                c.unidad_id AS unidadId, c.bodega_id AS bodegaId,
+                c.ubicacion_id AS ubicacionId, c.precio_unitario AS precioUnitario,
+                c.numero_lote AS numeroLote, c.fecha_vencimiento AS fechaVencimiento,
+                ec.codigo AS estadoCodigo,
+                COALESCE(SUM(o.cantidad), 0) AS stockCantidad,
+                COALESCE((
+                    SELECT SUM(r.cantidad_reservada - r.cantidad_cumplida)
+                    FROM inv_reservas r
+                    WHERE r.contenedor_id = c.id AND r.estado IN ('PENDIENTE','PARCIAL')
+                ), 0) AS cantidadReservada
+            FROM inv_contenedores c
+            JOIN inv_estados_contenedor ec ON ec.id = c.estado_id
+            LEFT JOIN inv_operaciones o ON o.contenedor_id = c.id AND o.activo = true
+            WHERE c.empresa_id = :empresaId AND c.producto_id = :productoId
+              AND c.bodega_id = :bodegaId AND ec.permite_picking = true AND c.activo = true
+            GROUP BY c.id, c.codigo_barras, c.producto_id, c.proveedor_id, c.unidad_id,
+                     c.bodega_id, c.ubicacion_id, c.precio_unitario, c.numero_lote,
+                     c.fecha_vencimiento, ec.codigo
+            HAVING COALESCE(SUM(o.cantidad), 0)
+                   - COALESCE((SELECT SUM(r.cantidad_reservada - r.cantidad_cumplida)
+                               FROM inv_reservas r WHERE r.contenedor_id = c.id
+                               AND r.estado IN ('PENDIENTE','PARCIAL')), 0) > 0
+            ORDER BY c.creado_en ASC
+            """, nativeQuery = true)
+    List<ContenedorStockProjection> findContenedoresDisponiblesFIFO(
+            @Param("empresaId") Long empresaId,
+            @Param("productoId") Long productoId,
+            @Param("bodegaId") Long bodegaId);
 }

@@ -1,13 +1,14 @@
 package com.exodia.inventario.aplicacion.comando.impl;
 
 import com.exodia.inventario.aplicacion.comando.BarcodeService;
+import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.domain.modelo.catalogo.Empresa;
+import com.exodia.inventario.domain.modelo.extension.ConfiguracionEmpresa;
 import com.exodia.inventario.domain.modelo.extension.SecuenciaBarcode;
 import com.exodia.inventario.excepcion.BarcodeDuplicadoException;
 import com.exodia.inventario.repositorio.catalogo.EmpresaRepository;
 import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
 import com.exodia.inventario.repositorio.extension.SecuenciaBarcodeRepository;
-import com.exodia.inventario.util.InventarioConstantes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,11 +27,13 @@ public class BarcodeServiceImpl implements BarcodeService {
     private final SecuenciaBarcodeRepository secuenciaBarcodeRepository;
     private final ContenedorRepository contenedorRepository;
     private final EmpresaRepository empresaRepository;
+    private final ConfiguracionEmpresaService configuracionEmpresaService;
 
     @Override
     @Transactional
     public String generarBarcode(Long empresaId) {
-        return generarBarcode(empresaId, InventarioConstantes.BARCODE_PREFIJO_DEFAULT);
+        ConfiguracionEmpresa config = configuracionEmpresaService.obtenerEntidadOCrear(empresaId);
+        return generarBarcode(empresaId, config.getBarcodePrefijo());
     }
 
     @Override
@@ -62,11 +65,12 @@ public class BarcodeServiceImpl implements BarcodeService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Empresa no encontrada: " + empresaId));
 
+        ConfiguracionEmpresa config = configuracionEmpresaService.obtenerEntidadOCrear(empresaId);
         SecuenciaBarcode nueva = SecuenciaBarcode.builder()
                 .empresa(empresa)
                 .prefijo(prefijo)
                 .ultimoValor(0L)
-                .longitudPadding(InventarioConstantes.BARCODE_LONGITUD_SECUENCIA)
+                .longitudPadding(config.getBarcodeLongitudPadding())
                 .build();
 
         return secuenciaBarcodeRepository.save(nueva);

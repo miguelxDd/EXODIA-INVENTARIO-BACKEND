@@ -1,9 +1,11 @@
 package com.exodia.inventario.aplicacion.comando.impl;
 
+import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.comando.ReservaService;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
 import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Reserva;
+import com.exodia.inventario.domain.modelo.extension.ConfiguracionEmpresa;
 import com.exodia.inventario.domain.politica.PoliticaReserva;
 import com.exodia.inventario.excepcion.EntidadNoEncontradaException;
 import com.exodia.inventario.excepcion.OperacionInvalidaException;
@@ -23,7 +25,6 @@ import java.util.List;
 
 import static com.exodia.inventario.util.InventarioConstantes.ESTADO_RESERVA_CANCELADA;
 import static com.exodia.inventario.util.InventarioConstantes.ESTADO_RESERVA_PENDIENTE;
-import static com.exodia.inventario.util.InventarioConstantes.HORAS_EXPIRACION_RESERVA_DEFAULT;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +34,7 @@ public class ReservaServiceImpl implements ReservaService {
     private final ReservaRepository reservaRepository;
     private final ContenedorRepository contenedorRepository;
     private final StockQueryService stockQueryService;
+    private final ConfiguracionEmpresaService configuracionEmpresaService;
     private final PoliticaReserva politicaReserva;
     private final ReservaMapeador reservaMapeador;
 
@@ -46,9 +48,10 @@ public class ReservaServiceImpl implements ReservaService {
 
         BigDecimal stockDisponible = stockQueryService.obtenerStockDisponible(contenedor.getId());
 
+        ConfiguracionEmpresa configEmpresa = configuracionEmpresaService.obtenerEntidadOCrear(empresaId);
         OffsetDateTime fechaExpiracion = request.fechaExpiracion() != null
                 ? request.fechaExpiracion()
-                : OffsetDateTime.now().plusHours(HORAS_EXPIRACION_RESERVA_DEFAULT);
+                : OffsetDateTime.now().plusHours(configEmpresa.getExpiracionReservaHoras());
 
         // Validar con politica de reserva
         PoliticaReserva.ResultadoValidacion resultado = politicaReserva.evaluar(

@@ -1,7 +1,9 @@
 package com.exodia.inventario.unit.aplicacion.comando;
 
+import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.comando.impl.BarcodeServiceImpl;
 import com.exodia.inventario.domain.modelo.catalogo.Empresa;
+import com.exodia.inventario.domain.modelo.extension.ConfiguracionEmpresa;
 import com.exodia.inventario.domain.modelo.extension.SecuenciaBarcode;
 import com.exodia.inventario.repositorio.catalogo.EmpresaRepository;
 import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
@@ -33,16 +35,26 @@ class BarcodeServiceTest {
     @Mock
     private EmpresaRepository empresaRepository;
 
+    @Mock
+    private ConfiguracionEmpresaService configuracionEmpresaService;
+
     @InjectMocks
     private BarcodeServiceImpl barcodeService;
 
     private Empresa empresa;
     private SecuenciaBarcode secuencia;
+    private ConfiguracionEmpresa configuracionEmpresa;
 
     @BeforeEach
     void setUp() {
         empresa = Empresa.builder().build();
         empresa.setId(1L);
+
+        configuracionEmpresa = ConfiguracionEmpresa.builder()
+                .empresa(empresa)
+                .barcodePrefijo("INV")
+                .barcodeLongitudPadding(8)
+                .build();
 
         secuencia = SecuenciaBarcode.builder()
                 .empresa(empresa)
@@ -55,6 +67,8 @@ class BarcodeServiceTest {
 
     @Test
     void deberiaGenerarPrimerBarcode() {
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L))
+                .thenReturn(configuracionEmpresa);
         when(secuenciaBarcodeRepository.findByEmpresaIdAndPrefijoForUpdate(1L, "INV"))
                 .thenReturn(Optional.of(secuencia));
         when(secuenciaBarcodeRepository.save(any(SecuenciaBarcode.class)))
@@ -70,6 +84,8 @@ class BarcodeServiceTest {
     @Test
     void deberiaIncrementarSecuencia() {
         secuencia.setUltimoValor(42L);
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L))
+                .thenReturn(configuracionEmpresa);
         when(secuenciaBarcodeRepository.findByEmpresaIdAndPrefijoForUpdate(1L, "INV"))
                 .thenReturn(Optional.of(secuencia));
         when(secuenciaBarcodeRepository.save(any(SecuenciaBarcode.class)))
@@ -103,6 +119,8 @@ class BarcodeServiceTest {
 
     @Test
     void deberiaCrearSecuenciaSiNoExiste() {
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L))
+                .thenReturn(configuracionEmpresa);
         when(secuenciaBarcodeRepository.findByEmpresaIdAndPrefijoForUpdate(1L, "INV"))
                 .thenReturn(Optional.empty());
         when(empresaRepository.findById(1L))
@@ -122,6 +140,12 @@ class BarcodeServiceTest {
 
     @Test
     void deberiaFallarSiEmpresaNoExisteAlCrearSecuencia() {
+        ConfiguracionEmpresa config999 = ConfiguracionEmpresa.builder()
+                .barcodePrefijo("INV")
+                .barcodeLongitudPadding(8)
+                .build();
+        when(configuracionEmpresaService.obtenerEntidadOCrear(999L))
+                .thenReturn(config999);
         when(secuenciaBarcodeRepository.findByEmpresaIdAndPrefijoForUpdate(999L, "INV"))
                 .thenReturn(Optional.empty());
         when(empresaRepository.findById(999L))

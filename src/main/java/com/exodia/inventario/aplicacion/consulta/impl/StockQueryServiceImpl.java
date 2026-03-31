@@ -81,6 +81,13 @@ public class StockQueryServiceImpl implements StockQueryService {
     }
 
     @Override
+    public List<ContenedorStockProjection> obtenerContenedoresDisponiblesFIFO(Long empresaId,
+                                                                              Long productoId,
+                                                                              Long bodegaId) {
+        return operacionRepository.findContenedoresDisponiblesFIFO(empresaId, productoId, bodegaId);
+    }
+
+    @Override
     public BigDecimal obtenerCostoPromedioPonderado(Long empresaId, Long productoId, Long bodegaId) {
         return operacionRepository.obtenerCostoPromedioPonderado(empresaId, productoId, bodegaId);
     }

@@ -1,6 +1,7 @@
 package com.exodia.inventario.aplicacion.comando.impl;
 
 import com.exodia.inventario.aplicacion.comando.BarcodeService;
+import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.TransferenciaService;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
@@ -19,6 +20,7 @@ import com.exodia.inventario.domain.modelo.catalogo.Ubicacion;
 import com.exodia.inventario.domain.modelo.catalogo.Unidad;
 import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Operacion;
+import com.exodia.inventario.domain.modelo.extension.ConfiguracionEmpresa;
 import com.exodia.inventario.domain.modelo.transferencia.Transferencia;
 import com.exodia.inventario.domain.modelo.transferencia.TransferenciaContenedor;
 import com.exodia.inventario.domain.modelo.transferencia.TransferenciaContenedorEntrada;
@@ -73,6 +75,7 @@ public class TransferenciaServiceImpl implements TransferenciaService {
     private final OperacionService operacionService;
     private final StockQueryService stockQueryService;
     private final BarcodeService barcodeService;
+    private final ConfiguracionEmpresaService configuracionEmpresaService;
     private final ValidadorEstadoTransferencia validadorEstado;
     private final PoliticaFEFO politicaFEFO;
     private final PoliticaDeduccionStock politicaDeduccionStock;
@@ -250,11 +253,11 @@ public class TransferenciaServiceImpl implements TransferenciaService {
                                     + " no encontrado en transferencia o ya fue recibido"));
 
             Contenedor contenedorOrigen = tc.getContenedor();
+            BigDecimal pendientePorRecibir = tc.getCantidad().subtract(tc.getCantidadRecibida());
             BigDecimal cantidadRecibida = recepcion.cantidadRecibida() != null
-                    ? recepcion.cantidadRecibida() : tc.getCantidad();
+                    ? recepcion.cantidadRecibida() : pendientePorRecibir;
 
             // Validar que cantidadRecibida no exceda lo pendiente por recibir
-            BigDecimal pendientePorRecibir = tc.getCantidad().subtract(tc.getCantidadRecibida());
             if (cantidadRecibida.compareTo(pendientePorRecibir) > 0) {
                 throw new OperacionInvalidaException(String.format(
                         "Cantidad recibida (%s) excede el pendiente (%s) para contenedor %d",
@@ -392,16 +395,23 @@ public class TransferenciaServiceImpl implements TransferenciaService {
     // ── Metodos privados ─────────────────────────────────────────────────────
 
     /**
-     * Resuelve contenedores via FEFO para una linea POR_PRODUCTO.
+     * Resuelve contenedores segun politica configurada (FEFO/FIFO) para una linea POR_PRODUCTO.
      * Adquiere locks en orden ascendente por ID para evitar deadlocks.
      */
     private List<TransferenciaContenedor> resolverContenedoresFEFO(
             Transferencia transferencia, TransferenciaLinea linea,
             Long empresaId, EstadoContenedor estadoEnTransito) {
 
-        // Obtener contenedores disponibles FEFO
-        List<ContenedorStockProjection> disponibles = stockQueryService
-                .obtenerContenedoresDisponiblesFEFO(
+        // Consultar politica de salida configurada
+        ConfiguracionEmpresa configEmpresa = configuracionEmpresaService.obtenerEntidadOCrear(empresaId);
+        String politica = configEmpresa.getPoliticaSalida();
+
+        // Obtener contenedores disponibles segun politica
+        List<ContenedorStockProjection> disponibles = "FIFO".equals(politica)
+                ? stockQueryService.obtenerContenedoresDisponiblesFIFO(
+                        empresaId, linea.getProductoId(),
+                        transferencia.getBodegaOrigen().getId())
+                : stockQueryService.obtenerContenedoresDisponiblesFEFO(
                         empresaId, linea.getProductoId(),
                         transferencia.getBodegaOrigen().getId());
 

@@ -1,5 +1,6 @@
 package com.exodia.inventario.unit.aplicacion.comando;
 
+import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.comando.impl.ReservaServiceImpl;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
 import com.exodia.inventario.domain.enums.TipoReferencia;
@@ -8,6 +9,7 @@ import com.exodia.inventario.domain.modelo.catalogo.Empresa;
 import com.exodia.inventario.domain.modelo.catalogo.EstadoContenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Reserva;
+import com.exodia.inventario.domain.modelo.extension.ConfiguracionEmpresa;
 import com.exodia.inventario.domain.politica.PoliticaReserva;
 import com.exodia.inventario.excepcion.EntidadNoEncontradaException;
 import com.exodia.inventario.excepcion.OperacionInvalidaException;
@@ -38,6 +40,7 @@ class ReservaServiceTest {
     @Mock private ReservaRepository reservaRepository;
     @Mock private ContenedorRepository contenedorRepository;
     @Mock private StockQueryService stockQueryService;
+    @Mock private ConfiguracionEmpresaService configuracionEmpresaService;
     @Mock private PoliticaReserva politicaReserva;
     @Mock private ReservaMapeador reservaMapeador;
 
@@ -47,11 +50,17 @@ class ReservaServiceTest {
     private Empresa empresa;
     private Bodega bodega;
     private Contenedor contenedor;
+    private ConfiguracionEmpresa configuracionEmpresa;
 
     @BeforeEach
     void setUp() {
         empresa = Empresa.builder().codigo("EMP1").nombre("Test").build();
         empresa.setId(1L);
+
+        configuracionEmpresa = ConfiguracionEmpresa.builder()
+                .empresa(empresa)
+                .expiracionReservaHoras(48)
+                .build();
 
         bodega = Bodega.builder().empresa(empresa).codigo("BOD1").nombre("Bodega").build();
         bodega.setId(1L);
@@ -72,6 +81,7 @@ class ReservaServiceTest {
 
         when(contenedorRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(contenedor));
         when(stockQueryService.obtenerStockDisponible(1L)).thenReturn(new BigDecimal("10"));
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L)).thenReturn(configuracionEmpresa);
         when(politicaReserva.evaluar(any(), any(), any()))
                 .thenReturn(new PoliticaReserva.ResultadoValidacion(true, null));
         when(reservaRepository.save(any(Reserva.class))).thenAnswer(inv -> {
@@ -98,6 +108,7 @@ class ReservaServiceTest {
 
         when(contenedorRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(contenedor));
         when(stockQueryService.obtenerStockDisponible(1L)).thenReturn(new BigDecimal("5"));
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L)).thenReturn(configuracionEmpresa);
         when(politicaReserva.evaluar(any(), any(), any()))
                 .thenReturn(new PoliticaReserva.ResultadoValidacion(false, "Stock insuficiente"));
 

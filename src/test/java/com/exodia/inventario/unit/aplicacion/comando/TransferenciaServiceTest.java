@@ -1,11 +1,13 @@
 package com.exodia.inventario.unit.aplicacion.comando;
 
 import com.exodia.inventario.aplicacion.comando.BarcodeService;
+import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.impl.TransferenciaServiceImpl;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
 import com.exodia.inventario.domain.modelo.catalogo.*;
 import com.exodia.inventario.domain.modelo.transferencia.Transferencia;
+import com.exodia.inventario.domain.politica.PoliticaDeduccionStock;
 import com.exodia.inventario.domain.servicio.PoliticaFEFO;
 import com.exodia.inventario.domain.servicio.ValidadorEstadoTransferencia;
 import com.exodia.inventario.excepcion.EntidadNoEncontradaException;
@@ -46,11 +48,14 @@ class TransferenciaServiceTest {
     @Mock private UbicacionRepository ubicacionRepository;
     @Mock private EstadoTransferenciaRepository estadoTransferenciaRepository;
     @Mock private ContenedorRepository contenedorRepository;
+    @Mock private EstadoContenedorRepository estadoContenedorRepository;
     @Mock private OperacionService operacionService;
     @Mock private StockQueryService stockQueryService;
     @Mock private BarcodeService barcodeService;
-    @Mock private PoliticaFEFO politicaFEFO;
+    @Mock private ConfiguracionEmpresaService configuracionEmpresaService;
     @Mock private ValidadorEstadoTransferencia validadorEstadoTransferencia;
+    @Mock private PoliticaFEFO politicaFEFO;
+    @Mock private PoliticaDeduccionStock politicaDeduccionStock;
     @Mock private TransferenciaMapeador transferenciaMapeador;
     @Mock private ApplicationEventPublisher eventPublisher;
 

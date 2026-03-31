@@ -8,7 +8,8 @@
       "Bash(grep:*)",
       "Bash(cmd.exe:*)",
       "Bash(find:*)",
-      "Bash(echo === SERVICE VERIFICATION ===:*)"
+      "Bash(echo === SERVICE VERIFICATION ===:*)",
+      "Bash(mvn clean:*)"
     ]
   }
 }
