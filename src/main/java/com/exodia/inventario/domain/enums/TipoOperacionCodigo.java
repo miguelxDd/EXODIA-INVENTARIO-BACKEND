@@ -1,0 +1,28 @@
+package com.exodia.inventario.domain.enums;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor
+public enum TipoOperacionCodigo {
+    RECEPCION("RECEPCION", 1),
+    PICKING("PICKING", -1),
+    AJUSTE_POSITIVO("AJUSTE_POSITIVO", 1),
+    AJUSTE_NEGATIVO("AJUSTE_NEGATIVO", -1),
+    AJUSTE_INFORMATIVO("AJUSTE_INFORMATIVO", 0),
+    SALIDA_TRANSFERENCIA("SALIDA_TRANSFERENCIA", -1),
+    ENTRADA_TRANSFERENCIA("ENTRADA_TRANSFERENCIA", 1),
+    SALIDA_MOVIMIENTO("SALIDA_MOVIMIENTO", -1),
+    ENTRADA_MOVIMIENTO("ENTRADA_MOVIMIENTO", 1),
+    SALIDA_CONVERSION("SALIDA_CONVERSION", -1),
+    ENTRADA_CONVERSION("ENTRADA_CONVERSION", 1),
+    INGRESO_PRODUCCION("INGRESO_PRODUCCION", 1),
+    MERMA("MERMA", -1),
+    AJUSTE_VENTA("AJUSTE_VENTA", -1),
+    CONTEO_POSITIVO("CONTEO_POSITIVO", 1),
+    CONTEO_NEGATIVO("CONTEO_NEGATIVO", -1);
+
+    private final String codigo;
+    private final int signo;
+}

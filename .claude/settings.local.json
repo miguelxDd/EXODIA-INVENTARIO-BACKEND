@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(tail:*)",
+      "Bash(ls:*)",
+      "Bash(ls \"/mnt/c/Program Files/Java/jdk-23/bin/java.exe\" && \"/mnt/c/Program Files/Java/jdk-23/bin/java.exe\" -version 2>&1)",
+      "Bash(grep:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(find:*)",
+      "Bash(echo === SERVICE VERIFICATION ===:*)",
+      "Bash(mvn clean:*)"
+    ]
+  }
+}
