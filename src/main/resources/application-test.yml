@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/exodia_inventario_test
-    username: ${DB_USERNAME:exodia}
-    password: ${DB_PASSWORD:exodia}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:ah18059}
   jpa:
     hibernate:
       ddl-auto: validate

@@ -1,7 +1,10 @@
 package com.exodia.inventario.infraestructura.listener;
 
 import com.exodia.inventario.domain.evento.ConteoAplicadoEvent;
+import com.exodia.inventario.domain.evento.ConversionInventarioRealizadaEvent;
 import com.exodia.inventario.domain.evento.InventarioRecibidoEvent;
+import com.exodia.inventario.domain.evento.MermaRegistradaEvent;
+import com.exodia.inventario.domain.evento.MovimientoContenedorRealizadoEvent;
 import com.exodia.inventario.domain.evento.PickingCompletadoEvent;
 import com.exodia.inventario.domain.evento.StockAjustadoEvent;
 import com.exodia.inventario.domain.evento.TransferenciaDespachadaEvent;
@@ -83,6 +86,37 @@ public class AuditoriaEventListener {
                 "CONTEO_APLICADO",
                 String.format("bodegaId=%d, ajustesPositivos=%d, ajustesNegativos=%d",
                         event.bodegaId(), event.ajustesPositivos(), event.ajustesNegativos()));
+    }
+
+    @EventListener
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onMermaRegistrada(MermaRegistradaEvent event) {
+        registrar(event.empresaId(), "RegistroMerma", event.mermaId(),
+                "MERMA_REGISTRADA",
+                String.format("contenedorId=%d, productoId=%d, cantidad=%s",
+                        event.contenedorId(), event.productoId(), event.cantidadMerma()));
+    }
+
+    @EventListener
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onMovimientoContenedor(MovimientoContenedorRealizadoEvent event) {
+        registrar(event.empresaId(), "Contenedor", event.contenedorId(),
+                "MOVIMIENTO_CONTENEDOR",
+                String.format("ubicacionOrigenId=%d, ubicacionDestinoId=%d, cantidad=%s",
+                        event.ubicacionOrigenId(), event.ubicacionDestinoId(), event.cantidadMovida()));
+    }
+
+    @EventListener
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onConversionInventario(ConversionInventarioRealizadaEvent event) {
+        registrar(event.empresaId(), "Contenedor", event.contenedorOrigenId(),
+                "CONVERSION_INVENTARIO",
+                String.format("unidadOrigenId=%d, unidadDestinoId=%d, cantidadOrigen=%s, cantidadDestino=%s",
+                        event.unidadOrigenId(), event.unidadDestinoId(),
+                        event.cantidadOrigen(), event.cantidadDestino()));
     }
 
     private void registrar(Long empresaId, String entidad, Long entidadId,

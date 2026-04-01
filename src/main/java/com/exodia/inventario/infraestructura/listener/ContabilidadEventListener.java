@@ -1,7 +1,10 @@
 package com.exodia.inventario.infraestructura.listener;
 
 import com.exodia.inventario.domain.evento.ConteoAplicadoEvent;
+import com.exodia.inventario.domain.evento.ConversionInventarioRealizadaEvent;
 import com.exodia.inventario.domain.evento.InventarioRecibidoEvent;
+import com.exodia.inventario.domain.evento.MermaRegistradaEvent;
+import com.exodia.inventario.domain.evento.MovimientoContenedorRealizadoEvent;
 import com.exodia.inventario.domain.evento.PickingCompletadoEvent;
 import com.exodia.inventario.domain.evento.StockAjustadoEvent;
 import com.exodia.inventario.domain.evento.TransferenciaDespachadaEvent;
@@ -71,6 +74,31 @@ public class ContabilidadEventListener {
         notificar(event.empresaId(), "CONTEO_FISICO", event.conteoId(), null,
                 String.format("Conteo aplicado: +%d/-%d ajustes en bodega %d",
                         event.ajustesPositivos(), event.ajustesNegativos(), event.bodegaId()));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async
+    public void onMermaRegistrada(MermaRegistradaEvent event) {
+        notificar(event.empresaId(), "MERMA", event.mermaId(), null,
+                String.format("Merma registrada contenedor %d, cantidad=%s",
+                        event.contenedorId(), event.cantidadMerma()));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async
+    public void onMovimientoContenedor(MovimientoContenedorRealizadoEvent event) {
+        notificar(event.empresaId(), "MOVIMIENTO_INTERNO", event.contenedorId(), null,
+                String.format("Movimiento interno %d -> %d, cantidad=%s",
+                        event.ubicacionOrigenId(), event.ubicacionDestinoId(), event.cantidadMovida()));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async
+    public void onConversionInventario(ConversionInventarioRealizadaEvent event) {
+        notificar(event.empresaId(), "CONVERSION_INVENTARIO", event.contenedorOrigenId(), null,
+                String.format("Conversion %d -> %d, origen=%s destino=%s",
+                        event.unidadOrigenId(), event.unidadDestinoId(),
+                        event.cantidadOrigen(), event.cantidadDestino()));
     }
 
     private void notificar(Long empresaId, String tipo, Long refId,

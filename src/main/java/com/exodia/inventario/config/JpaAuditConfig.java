@@ -8,6 +8,8 @@ import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 @Configuration
 @EnableJpaAuditing(auditorAwareRef = "auditorProvider")
@@ -32,7 +34,28 @@ public class JpaAuditConfig {
             if (principal instanceof Long userId) {
                 return Optional.of(userId);
             }
+            if (principal instanceof Jwt jwt) {
+                return extraerUserId(jwt);
+            }
+            if (auth instanceof JwtAuthenticationToken jwtAuthenticationToken) {
+                return extraerUserId(jwtAuthenticationToken.getToken());
+            }
             return Optional.of(SYSTEM_USER_ID);
         };
+    }
+
+    private Optional<Long> extraerUserId(Jwt jwt) {
+        Object userId = jwt.getClaims().get("user_id");
+        if (userId == null) {
+            userId = jwt.getClaims().get("uid");
+        }
+        if (userId == null) {
+            userId = jwt.getSubject();
+        }
+        try {
+            return Optional.of(Long.parseLong(String.valueOf(userId)));
+        } catch (Exception ex) {
+            return Optional.of(SYSTEM_USER_ID);
+        }
     }
 }

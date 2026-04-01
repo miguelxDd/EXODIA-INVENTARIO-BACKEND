@@ -5,6 +5,8 @@ import com.exodia.inventario.aplicacion.comando.LoteService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.RecepcionService;
 import com.exodia.inventario.infraestructura.integracion.ProductoAdapter;
+import com.exodia.inventario.infraestructura.integracion.ComprasAdapter;
+import com.exodia.inventario.infraestructura.integracion.ProduccionAdapter;
 import com.exodia.inventario.domain.modelo.extension.ConfiguracionProducto;
 import com.exodia.inventario.repositorio.extension.ConfiguracionProductoRepository;
 import com.exodia.inventario.domain.enums.EstadoContenedorCodigo;
@@ -65,6 +67,8 @@ public class RecepcionServiceImpl implements RecepcionService {
     private final LoteService loteService;
     private final ConfiguracionProductoRepository configuracionProductoRepository;
     private final ProductoAdapter productoAdapter;
+    private final ComprasAdapter comprasAdapter;
+    private final ProduccionAdapter produccionAdapter;
     private final RecepcionMapeador recepcionMapeador;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -79,6 +83,9 @@ public class RecepcionServiceImpl implements RecepcionService {
                 .filter(b -> Boolean.TRUE.equals(b.getActivo()))
                 .orElseThrow(() -> new EntidadNoEncontradaException("Bodega", request.bodegaId()));
 
+        TipoRecepcion tipoRecepcion = TipoRecepcion.valueOf(request.tipoRecepcion());
+        validarReferenciaExternaRecepcion(empresaId, tipoRecepcion, request);
+
         EstadoContenedor estadoDisponible = estadoContenedorRepository
                 .findByCodigo(EstadoContenedorCodigo.DISPONIBLE.getCodigo())
                 .orElseThrow(() -> new OperacionInvalidaException(
@@ -91,7 +98,7 @@ public class RecepcionServiceImpl implements RecepcionService {
                 .empresa(empresa)
                 .numeroRecepcion(numeroRecepcion)
                 .bodega(bodega)
-                .tipoRecepcion(TipoRecepcion.valueOf(request.tipoRecepcion()))
+                .tipoRecepcion(tipoRecepcion)
                 .referenciaOrigenId(request.referenciaOrigenId())
                 .proveedorId(request.proveedorId())
                 .comentarios(request.comentarios())
@@ -302,5 +309,42 @@ public class RecepcionServiceImpl implements RecepcionService {
 
     private String generarNumeroRecepcion(Long empresaId) {
         return barcodeService.generarBarcode(empresaId, "REC");
+    }
+
+    private void validarReferenciaExternaRecepcion(Long empresaId,
+                                                   TipoRecepcion tipoRecepcion,
+                                                   CrearRecepcionRequest request) {
+        if (tipoRecepcion == TipoRecepcion.ORDEN_COMPRA) {
+            if (request.referenciaOrigenId() == null) {
+                throw new OperacionInvalidaException(
+                        "Recepcion tipo ORDEN_COMPRA requiere referenciaOrigenId");
+            }
+            comprasAdapter.validarRecepcionOrdenCompra(
+                    empresaId,
+                    request.referenciaOrigenId(),
+                    request.lineas().stream()
+                            .map(linea -> new ComprasAdapter.LineaRecepcionCompra(
+                                    linea.productoId(),
+                                    linea.unidadId(),
+                                    linea.cantidad(),
+                                    linea.precioUnitario() != null ? linea.precioUnitario() : BigDecimal.ZERO))
+                            .toList());
+        }
+
+        if (tipoRecepcion == TipoRecepcion.PRODUCCION) {
+            if (request.referenciaOrigenId() == null) {
+                throw new OperacionInvalidaException(
+                        "Recepcion tipo PRODUCCION requiere referenciaOrigenId");
+            }
+            produccionAdapter.validarIngresoProduccion(
+                    empresaId,
+                    request.referenciaOrigenId(),
+                    request.lineas().stream()
+                            .map(linea -> new ProduccionAdapter.LineaProduccion(
+                                    linea.productoId(),
+                                    linea.unidadId(),
+                                    linea.cantidad()))
+                            .toList());
+        }
     }
 }

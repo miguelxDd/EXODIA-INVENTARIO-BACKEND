@@ -38,10 +38,9 @@ Cobertura funcional expuesta hoy por API:
 Pendientes o incompletos a nivel de plataforma:
 
 - no hay CRUD/API para empresas
-- no hay seguridad JWT todavía
+- JWT solo está endurecido para `prod`; todavía falta cerrar por completo la resolución de tenant desde identidad
 - la auditoría usa usuario fijo
-- no hay tests de integración ni end-to-end
-- no hay `application-prod.yml`
+- no hay end-to-end ejecutados en este entorno
 
 ## Stack y versiones
 
@@ -206,27 +205,32 @@ Casi toda la API es multiempresa y espera el header `X-Empresa-Id`.
 
 Nota importante sobre rutas:
 
-- el proyecto tiene `server.servlet.context-path=/api`
 - los controllers están mapeados con `/api/v1/...`
-- por eso las rutas efectivas hoy quedan como `/api/api/v1/...`
+- en el `application.yml` actual no hay `context-path` adicional
+- por eso las rutas efectivas hoy quedan como `/api/v1/...`
 
 Módulos expuestos:
 
-- `/api/api/v1/bodegas`: `POST`, `GET/{id}`, `GET`, `PATCH/{id}`, `DELETE/{id}/desactivar`
-- `/api/api/v1/ubicaciones`: `POST`, `GET/{id}`, `GET?bodegaId=...`, `PATCH/{id}`, `DELETE/{id}/desactivar`
-- `/api/api/v1/unidades`: `POST`, `GET/{id}`, `GET`, `PATCH/{id}`, `DELETE/{id}/desactivar`
-- `/api/api/v1/conversiones-unidad`: `POST`, `GET/{id}`, `GET`, `DELETE/{id}/desactivar`
-- `/api/api/v1/inventario/stock`: `GET /contenedor/{id}`, `GET /barcode/{codigoBarras}`, `GET /producto-bodega`, `GET /consolidado`, `GET /agrupado`, `GET /disponible-fefo`
-- `/api/api/v1/inventario/kardex`: `GET`
-- `/api/api/v1/recepciones`: `POST`, `GET/{id}`, `GET`
-- `/api/api/v1/ajustes`: `POST`, `GET/{id}`, `GET`
-- `/api/api/v1/transferencias`: `POST`, `GET/{id}`, `GET`, `PATCH /{id}/confirmar`, `PATCH /{id}/despachar`, `PATCH /{id}/recibir`, `PATCH /{id}/cancelar`
-- `/api/api/v1/picking`: `POST`, `PATCH /{id}/ejecutar`, `GET/{id}`, `GET`, `PATCH /{id}/cancelar`
-- `/api/api/v1/conteos`: `POST`, `POST /{id}/lineas`, `PATCH /{id}/aplicar`, `GET/{id}`, `GET`, `PATCH /{id}/cancelar`
-- `/api/api/v1/reservas`: `POST`, `GET/{id}`, `GET /contenedor/{contenedorId}`, `PATCH /{id}/cancelar`
-- `/api/api/v1/maximos-minimos`: `POST`, `GET/{id}`, `GET?bodegaId=...`, `PATCH/{id}`, `DELETE/{id}/desactivar`
-- `/api/api/v1/mermas`: `POST`
-- `/api/api/v1/valorizacion`: `POST /foto-costo`, `GET /fotos-costo`
+- `/api/v1/bodegas`: `POST`, `GET/{id}`, `GET`, `PATCH/{id}`, `DELETE/{id}/desactivar`
+- `/api/v1/ubicaciones`: `POST`, `GET/{id}`, `GET?bodegaId=...`, `PATCH/{id}`, `DELETE/{id}/desactivar`
+- `/api/v1/unidades`: `POST`, `GET/{id}`, `GET`, `PATCH/{id}`, `DELETE/{id}/desactivar`
+- `/api/v1/conversiones-unidad`: `POST`, `GET/{id}`, `GET`, `DELETE/{id}/desactivar`
+- `/api/v1/inventario/conversiones`: `POST`
+- `/api/v1/inventario/stock`: `GET /contenedor/{id}`, `GET /barcode/{codigoBarras}`, `GET /producto-bodega`, `GET /consolidado`, `GET /agrupado`, `GET /proximos-a-vencer`, `GET /disponible-fefo`
+- `/api/v1/inventario/kardex`: `GET`
+- `/api/v1/recepciones`: `POST`, `GET/{id}`, `GET`
+- `/api/v1/ajustes`: `POST`, `GET/{id}`, `GET`
+- `/api/v1/transferencias`: `POST`, `GET/{id}`, `GET`, `PATCH /{id}/confirmar`, `PATCH /{id}/despachar`, `PATCH /{id}/recibir`, `PATCH /{id}/cancelar`
+- `/api/v1/picking`: `POST`, `PATCH /{id}/ejecutar`, `GET/{id}`, `GET`, `PATCH /{id}/cancelar`
+- `/api/v1/conteos`: `POST`, `POST /{id}/lineas`, `PATCH /{id}/aplicar`, `GET/{id}`, `GET`, `PATCH /{id}/cancelar`
+- `/api/v1/reservas`: `POST`, `GET/{id}`, `GET /contenedor/{contenedorId}`, `PATCH /{id}/cancelar`
+- `/api/v1/maximos-minimos`: `POST`, `GET/{id}`, `GET?bodegaId=...`, `PATCH/{id}`, `DELETE/{id}/desactivar`
+- `/api/v1/mermas`: `POST`, `GET/{id}`, `GET`
+- `/api/v1/config-merma`: `POST`, `GET/{id}`, `GET`, `PATCH/{id}`, `DELETE/{id}/desactivar`
+- `/api/v1/configuracion-producto`: `POST`, `GET/{productoId}`, `GET`, `PATCH/{productoId}`
+- `/api/v1/configuracion-empresa`: `GET`, `PATCH`
+- `/api/v1/movimientos/contenedores`: `POST /{id}/mover`, `POST /{id}/enviar-standby`, `POST /{id}/sacar-standby`
+- `/api/v1/valorizacion`: `POST /foto-costo`, `GET /fotos-costo`
 
 ## Swagger y OpenAPI
 
@@ -238,7 +242,7 @@ Módulos expuestos:
 Crear una bodega:
 
 ```bash
-curl --request POST 'http://localhost:8080/api/api/v1/bodegas' \
+curl --request POST 'http://localhost:8080/api/v1/bodegas' \
   --header 'Content-Type: application/json' \
   --header 'X-Empresa-Id: 1' \
   --data '{
@@ -255,7 +259,7 @@ curl --request POST 'http://localhost:8080/api/api/v1/bodegas' \
 Crear una recepción:
 
 ```bash
-curl --request POST 'http://localhost:8080/api/api/v1/recepciones' \
+curl --request POST 'http://localhost:8080/api/v1/recepciones' \
   --header 'Content-Type: application/json' \
   --header 'X-Empresa-Id: 1' \
   --data '{
@@ -280,7 +284,7 @@ curl --request POST 'http://localhost:8080/api/api/v1/recepciones' \
 Consultar stock consolidado:
 
 ```bash
-curl 'http://localhost:8080/api/api/v1/inventario/stock/consolidado?pagina=0&tamanio=20' \
+curl 'http://localhost:8080/api/v1/inventario/stock/consolidado?pagina=0&tamanio=20' \
   --header 'X-Empresa-Id: 1'
 ```
 
@@ -291,7 +295,7 @@ Hoy el repositorio contiene únicamente pruebas unitarias. No se encontraron `@S
 Estado actual del testing:
 
 - 15 archivos de test unitario
-- 0 tests de integración
+- existen tests de integración con `@SpringBootTest` y Testcontainers
 - 0 tests end-to-end
 
 Cobertura observada:
@@ -303,16 +307,17 @@ Cobertura observada:
 - `OperacionService`
 - consultas de stock y kardex
 
-Aunque la superficie REST ya es mucho mayor, todavía no hay cobertura automática de controllers ni de flujos completos.
+Aunque la superficie REST ya es mucho mayor, la cobertura automática todavía no es total ni cubre todos los flujos end-to-end.
+Aunque la cobertura todavía no es total, el repositorio ya incluye varias pruebas de integración con `@SpringBootTest` y Testcontainers para flujos principales.
 
 ## Limitaciones y decisiones actuales
 
 - seguridad abierta para desarrollo: `SecurityConfig` permite todas las solicitudes
-- auditoría técnica provisional: `JpaAuditConfig` devuelve siempre el usuario `1L`
+- en desarrollo la auditoría sigue cayendo a usuario técnico si no hay JWT
 - no hay CRUD/API para empresas
 - el proyecto requiere `JAVA_HOME`; sin eso `./mvnw` no arranca
 - el perfil `test` apunta a PostgreSQL local aunque `pom.xml` también declara `H2`
-- valorización expone fotos de costo por API, pero el cálculo actual usa `costoUnitario = 0`, así que no es un costeo final de negocio todavía
+- valorización ya calcula foto de costo con promedio ponderado, pero todavía requiere validación funcional de negocio antes de considerarse costeo final
 - la API ya cubre muchos flujos, pero la cobertura de pruebas sigue concentrada en piezas base
 
 ## Siguiente enfoque recomendado

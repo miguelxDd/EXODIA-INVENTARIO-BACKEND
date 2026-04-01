@@ -5,6 +5,8 @@ import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.PickingService;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
+import com.exodia.inventario.infraestructura.integracion.ProduccionAdapter;
+import com.exodia.inventario.infraestructura.integracion.VentasAdapter;
 import com.exodia.inventario.domain.enums.EstadoContenedorCodigo;
 import com.exodia.inventario.domain.enums.TipoOperacionCodigo;
 import com.exodia.inventario.domain.enums.TipoReferencia;
@@ -64,6 +66,8 @@ public class PickingServiceImpl implements PickingService {
     private final ConfiguracionEmpresaService configuracionEmpresaService;
     private final PoliticaFEFO politicaFEFO;
     private final PoliticaDeduccionStock politicaDeduccionStock;
+    private final VentasAdapter ventasAdapter;
+    private final ProduccionAdapter produccionAdapter;
     private final PickingMapeador pickingMapeador;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -77,6 +81,8 @@ public class PickingServiceImpl implements PickingService {
                 .filter(b -> b.getEmpresa().getId().equals(empresaId))
                 .filter(b -> Boolean.TRUE.equals(b.getActivo()))
                 .orElseThrow(() -> new EntidadNoEncontradaException("Bodega", request.bodegaId()));
+
+        validarReferenciaExternaPicking(empresaId, request);
 
         String numeroOrden = barcodeService.generarBarcode(empresaId, "PKG");
 
@@ -338,6 +344,36 @@ public class PickingServiceImpl implements PickingService {
             PickingLineaAsignacion unicaAsignacion = linea.getAsignaciones().get(0);
             linea.setContenedor(unicaAsignacion.getContenedor());
             linea.setOperacion(unicaAsignacion.getOperacion());
+        }
+    }
+
+    private void validarReferenciaExternaPicking(Long empresaId, CrearOrdenPickingRequest request) {
+        if (request.tipoReferencia() == null || request.referenciaId() == null) {
+            return;
+        }
+
+        if (request.tipoReferencia() == TipoReferencia.VENTA) {
+            ventasAdapter.validarPedidoDespachable(
+                    empresaId,
+                    request.referenciaId(),
+                    request.lineas().stream()
+                            .map(linea -> new VentasAdapter.LineaVentaSolicitud(
+                                    linea.productoId(),
+                                    linea.unidadId(),
+                                    linea.cantidadSolicitada()))
+                            .toList());
+        }
+
+        if (request.tipoReferencia() == TipoReferencia.ORDEN_PRODUCCION) {
+            produccionAdapter.validarConsumoProduccion(
+                    empresaId,
+                    request.referenciaId(),
+                    request.lineas().stream()
+                            .map(linea -> new ProduccionAdapter.LineaProduccion(
+                                    linea.productoId(),
+                                    linea.unidadId(),
+                                    linea.cantidadSolicitada()))
+                            .toList());
         }
     }
 }

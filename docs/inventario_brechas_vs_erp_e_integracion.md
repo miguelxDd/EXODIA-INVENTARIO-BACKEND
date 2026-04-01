@@ -60,11 +60,11 @@ Conclusion practica:
 | Ventas / facturacion / despacho | Bajo | No existe cierre real de inventario contra venta | Integrar con alta prioridad |
 | Requisiciones / produccion | Parcial | Hay picking y `TipoReferencia`, pero no integracion real | Integrar segun negocio |
 | Contabilidad | Parcial | Existe puerto ACL, pero solo stub | Integrar async |
-| Merma configurable / automatica | Parcial | Existe modelo, pero no esta conectado al flujo | Cerrar dentro de inventario |
+| Merma configurable / automatica | Parcial | CRUD y validaciones ya existen; falta cerrar automatizacion y motivos mas ricos | Cerrar dentro de inventario |
 | Etiquetas / PDF | Bajo | No hay modulo de impresion ni reportes de etiquetas | Integrar o separar en servicio de reportes |
 | Inventario documental | Bajo | No existe modulo equivalente | Separar como bounded context distinto |
-| Seguridad / tenant / auditoria prod | Bajo | Sigue siendo brecha de plataforma | Cerrar antes de produccion seria |
-| Outbox / idempotencia / observabilidad | Bajo | Todavia faltan piezas de integracion robusta | Cerrar como backlog tecnico |
+| Seguridad / tenant / auditoria prod | Parcial | Ya existe perfil `prod` con JWT base, pero falta endurecer tenant e identidad extremo a extremo | Cerrar antes de produccion seria |
+| Outbox / idempotencia / observabilidad | Parcial | Ya existe outbox persistente; falta idempotencia completa y observabilidad operativa | Cerrar como backlog tecnico |
 
 ---
 
@@ -315,18 +315,18 @@ Integracion asincrona con outbox:
 
 ### Estado actual
 
-El modelo ya existe:
+El modelo ya existe y ya esta expuesto:
 
 - `ConfigMerma`
 - `RegistroMerma`
+- API REST de configuracion de merma
 
-Pero el flujo actual de merma solo registra merma manual. La configuracion de merma no esta expuesta ni aplicada.
+El flujo actual registra merma manual y valida contra configuracion y tolerancia por producto. Lo que sigue faltando es la parte automatica y una semantica mas rica de motivos/reglas.
 
 ### Lo que falta
 
-- CRUD de configuracion de merma,
-- reglas por empresa, producto y bodega,
-- motivos de merma,
+- motivos de merma mas ricos,
+- reglas operativas mas finas por escenario,
 - procesamiento automatico si el negocio realmente lo necesita.
 
 ### Recomendacion

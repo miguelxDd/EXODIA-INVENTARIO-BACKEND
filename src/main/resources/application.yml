@@ -3,9 +3,9 @@ spring:
     name: exodia-inventario
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/exodia_inventario
-    username: ${DB_USERNAME:exodia}
-    password: ${DB_PASSWORD:exodia}
+    url: jdbc:postgresql://localhost:5434/exodia_inventario
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:ah18059}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
@@ -34,8 +34,9 @@ spring:
 
   jackson:
     default-property-inclusion: non_null
-    serialization:
-      write-dates-as-timestamps: false
+    datatype:
+      datetime:
+        write-dates-as-timestamps: false
 
 server:
   port: 8080

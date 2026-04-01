@@ -3,6 +3,7 @@ package com.exodia.inventario.aplicacion.comando.impl;
 import com.exodia.inventario.aplicacion.comando.MermaService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
+import com.exodia.inventario.domain.evento.MermaRegistradaEvent;
 import com.exodia.inventario.domain.enums.TipoMerma;
 import com.exodia.inventario.domain.enums.TipoOperacionCodigo;
 import com.exodia.inventario.domain.enums.TipoReferencia;
@@ -24,6 +25,7 @@ import com.exodia.inventario.repositorio.extension.ConfiguracionProductoReposito
 import com.exodia.inventario.repositorio.extension.RegistroMermaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,7 @@ public class MermaServiceImpl implements MermaService {
     private final StockQueryService stockQueryService;
     private final PoliticaDeduccionStock politicaDeduccionStock;
     private final MermaMapeador mermaMapeador;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -102,6 +105,15 @@ public class MermaServiceImpl implements MermaService {
 
         log.info("Merma registrada: contenedor={}, cantidad={}, empresa={}",
                 contenedor.getCodigoBarras(), request.cantidadMerma(), empresaId);
+
+        eventPublisher.publishEvent(new MermaRegistradaEvent(
+                registro.getId(),
+                empresaId,
+                contenedor.getId(),
+                contenedor.getProductoId(),
+                contenedor.getBodega() != null ? contenedor.getBodega().getId() : null,
+                request.cantidadMerma(),
+                tipoMermaResuelto.name()));
 
         return mermaMapeador.toResponse(registro);
     }
