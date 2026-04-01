@@ -9,6 +9,7 @@ import com.exodia.inventario.domain.evento.PickingCompletadoEvent;
 import com.exodia.inventario.domain.evento.StockAjustadoEvent;
 import com.exodia.inventario.domain.evento.TransferenciaDespachadaEvent;
 import com.exodia.inventario.domain.evento.TransferenciaRecibidaEvent;
+import com.exodia.inventario.domain.evento.VentaFacturadaAjustadaEvent;
 import com.exodia.inventario.domain.modelo.catalogo.Empresa;
 import com.exodia.inventario.domain.modelo.extension.Auditoria;
 import com.exodia.inventario.repositorio.catalogo.EmpresaRepository;
@@ -117,6 +118,16 @@ public class AuditoriaEventListener {
                 String.format("unidadOrigenId=%d, unidadDestinoId=%d, cantidadOrigen=%s, cantidadDestino=%s",
                         event.unidadOrigenId(), event.unidadDestinoId(),
                         event.cantidadOrigen(), event.cantidadDestino()));
+    }
+
+    @EventListener
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onVentaFacturadaAjustada(VentaFacturadaAjustadaEvent event) {
+        registrar(event.empresaId(), "Ajuste", event.ajusteId(),
+                "VENTA_FACTURADA_AJUSTADA",
+                String.format("ventaId=%d, bodegaId=%d, contenedores=%d",
+                        event.ventaId(), event.bodegaId(), event.contenedorIds().size()));
     }
 
     private void registrar(Long empresaId, String entidad, Long entidadId,

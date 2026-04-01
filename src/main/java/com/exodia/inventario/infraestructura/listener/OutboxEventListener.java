@@ -9,6 +9,7 @@ import com.exodia.inventario.domain.evento.PickingCompletadoEvent;
 import com.exodia.inventario.domain.evento.StockAjustadoEvent;
 import com.exodia.inventario.domain.evento.TransferenciaDespachadaEvent;
 import com.exodia.inventario.domain.evento.TransferenciaRecibidaEvent;
+import com.exodia.inventario.domain.evento.VentaFacturadaAjustadaEvent;
 import com.exodia.inventario.infraestructura.integracion.OutboxService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -71,6 +72,12 @@ public class OutboxEventListener {
     public void onConversionRealizada(ConversionInventarioRealizadaEvent event) {
         registrar(event.empresaId(), "Contenedor", event.contenedorOrigenId(),
                 "inventario.conversion.realizada", event);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void onVentaFacturadaAjustada(VentaFacturadaAjustadaEvent event) {
+        registrar(event.empresaId(), "Ajuste", event.ajusteId(),
+                "inventario.venta.ajustada", event);
     }
 
     private void registrar(Long empresaId,

@@ -12,6 +12,10 @@ public interface VentasAdapter {
                                   Long pedidoId,
                                   List<LineaVentaSolicitud> lineas);
 
+    void validarVentaFacturada(Long empresaId,
+                               Long ventaId,
+                               List<LineaVentaSolicitud> lineas);
+
     record LineaVentaSolicitud(
             Long productoId,
             Long unidadId,

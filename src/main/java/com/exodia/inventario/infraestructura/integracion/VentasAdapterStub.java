@@ -19,4 +19,12 @@ public class VentasAdapterStub implements VentasAdapter {
         log.info("Stub ventas: validar picking empresa={}, pedido={}, lineas={}",
                 empresaId, pedidoId, lineas.size());
     }
+
+    @Override
+    public void validarVentaFacturada(Long empresaId,
+                                      Long ventaId,
+                                      List<LineaVentaSolicitud> lineas) {
+        log.info("Stub ventas: validar ajuste por venta empresa={}, venta={}, lineas={}",
+                empresaId, ventaId, lineas.size());
+    }
 }

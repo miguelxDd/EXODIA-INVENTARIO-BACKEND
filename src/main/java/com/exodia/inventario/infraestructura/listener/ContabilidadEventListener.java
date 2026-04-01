@@ -9,6 +9,7 @@ import com.exodia.inventario.domain.evento.PickingCompletadoEvent;
 import com.exodia.inventario.domain.evento.StockAjustadoEvent;
 import com.exodia.inventario.domain.evento.TransferenciaDespachadaEvent;
 import com.exodia.inventario.domain.evento.TransferenciaRecibidaEvent;
+import com.exodia.inventario.domain.evento.VentaFacturadaAjustadaEvent;
 import com.exodia.inventario.infraestructura.integracion.ContabilidadAdapter;
 import com.exodia.inventario.infraestructura.integracion.ContabilidadAdapter.MovimientoContable;
 import lombok.RequiredArgsConstructor;
@@ -99,6 +100,14 @@ public class ContabilidadEventListener {
                 String.format("Conversion %d -> %d, origen=%s destino=%s",
                         event.unidadOrigenId(), event.unidadDestinoId(),
                         event.cantidadOrigen(), event.cantidadDestino()));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async
+    public void onVentaFacturadaAjustada(VentaFacturadaAjustadaEvent event) {
+        notificar(event.empresaId(), "VENTA_AJUSTADA", event.ajusteId(), null,
+                String.format("Ajuste por venta %d con %d lineas reales en bodega %d",
+                        event.ventaId(), event.lineasProcesadas(), event.bodegaId()));
     }
 
     private void notificar(Long empresaId, String tipo, Long refId,

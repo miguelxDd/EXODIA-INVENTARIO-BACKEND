@@ -2,12 +2,12 @@ package com.exodia.inventario.aplicacion.comando.impl;
 
 import com.exodia.inventario.aplicacion.comando.BarcodeService;
 import com.exodia.inventario.aplicacion.comando.LoteService;
+import com.exodia.inventario.aplicacion.comando.MermaService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.RecepcionService;
 import com.exodia.inventario.infraestructura.integracion.ProductoAdapter;
 import com.exodia.inventario.infraestructura.integracion.ComprasAdapter;
 import com.exodia.inventario.infraestructura.integracion.ProduccionAdapter;
-import com.exodia.inventario.domain.modelo.extension.ConfiguracionProducto;
 import com.exodia.inventario.repositorio.extension.ConfiguracionProductoRepository;
 import com.exodia.inventario.domain.enums.EstadoContenedorCodigo;
 import com.exodia.inventario.domain.enums.TipoOperacionCodigo;
@@ -65,6 +65,7 @@ public class RecepcionServiceImpl implements RecepcionService {
     private final OperacionService operacionService;
     private final BarcodeService barcodeService;
     private final LoteService loteService;
+    private final MermaService mermaService;
     private final ConfiguracionProductoRepository configuracionProductoRepository;
     private final ProductoAdapter productoAdapter;
     private final ComprasAdapter comprasAdapter;
@@ -168,6 +169,14 @@ public class RecepcionServiceImpl implements RecepcionService {
         Long proveedorId = lineaReq.proveedorId() != null ? lineaReq.proveedorId() : proveedorIdHeader;
         BigDecimal precioUnitario = lineaReq.precioUnitario() != null
                 ? lineaReq.precioUnitario() : BigDecimal.ZERO;
+        BigDecimal cantidadMerma = lineaReq.cantidadMerma() != null
+                ? lineaReq.cantidadMerma() : BigDecimal.ZERO;
+
+        if (cantidadMerma.compareTo(lineaReq.cantidad()) > 0) {
+            throw new OperacionInvalidaException(String.format(
+                    "La cantidad de merma %s no puede exceder la cantidad recibida %s para producto %d",
+                    cantidadMerma, lineaReq.cantidad(), lineaReq.productoId()));
+        }
 
         // Validar requisitos de lote/vencimiento/unidadBase segun ConfiguracionProducto
         configuracionProductoRepository
@@ -289,6 +298,15 @@ public class RecepcionServiceImpl implements RecepcionService {
                 TipoReferencia.RECEPCION,
                 recepcion.getId(),
                 null);
+
+        if (cantidadMerma.compareTo(BigDecimal.ZERO) > 0) {
+            mermaService.registrarAutomaticaEnRecepcion(
+                    empresa.getId(),
+                    contenedor.getId(),
+                    cantidadMerma,
+                    String.format("Recepcion %s, producto %d",
+                            recepcion.getNumeroRecepcion(), lineaReq.productoId()));
+        }
 
         // Crear linea de recepcion
         return RecepcionLinea.builder()

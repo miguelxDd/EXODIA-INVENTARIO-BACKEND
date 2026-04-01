@@ -14,6 +14,7 @@ public record RecepcionLineaRequest(
     @NotNull @Schema(description = "ID de la unidad") Long unidadId,
     @NotNull @Schema(description = "ID de la ubicacion destino") Long ubicacionId,
     @NotNull @Positive @Schema(description = "Cantidad a recibir") BigDecimal cantidad,
+    @Schema(description = "Cantidad de merma detectada en recepcion") @Positive BigDecimal cantidadMerma,
     @Schema(description = "Precio unitario") BigDecimal precioUnitario,
     @Size(max = 100) @Schema(description = "Numero de lote") String numeroLote,
     @Schema(description = "Fecha de vencimiento") LocalDate fechaVencimiento,

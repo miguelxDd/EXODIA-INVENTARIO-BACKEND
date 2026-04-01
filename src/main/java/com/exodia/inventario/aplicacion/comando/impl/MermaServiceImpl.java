@@ -6,7 +6,6 @@ import com.exodia.inventario.aplicacion.consulta.StockQueryService;
 import com.exodia.inventario.domain.evento.MermaRegistradaEvent;
 import com.exodia.inventario.domain.enums.TipoMerma;
 import com.exodia.inventario.domain.enums.TipoOperacionCodigo;
-import com.exodia.inventario.domain.enums.TipoReferencia;
 import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Operacion;
 import com.exodia.inventario.domain.modelo.extension.ConfigMerma;
@@ -18,7 +17,6 @@ import com.exodia.inventario.excepcion.StockInsuficienteException;
 import com.exodia.inventario.interfaz.dto.peticion.CrearMermaRequest;
 import com.exodia.inventario.interfaz.dto.respuesta.MermaResponse;
 import com.exodia.inventario.interfaz.mapeador.MermaMapeador;
-import com.exodia.inventario.domain.modelo.extension.ConfiguracionProducto;
 import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
 import com.exodia.inventario.repositorio.extension.ConfigMermaRepository;
 import com.exodia.inventario.repositorio.extension.ConfiguracionProductoRepository;
@@ -52,70 +50,28 @@ public class MermaServiceImpl implements MermaService {
     @Override
     @Transactional
     public MermaResponse registrar(Long empresaId, CrearMermaRequest request) {
-        // Lock pesimista — la merma es una deduccion de stock
-        Contenedor contenedor = contenedorRepository.findByIdForUpdate(request.contenedorId())
-                .filter(c -> c.getEmpresa().getId().equals(empresaId))
-                .orElseThrow(() -> new EntidadNoEncontradaException("Contenedor", request.contenedorId()));
-
-        BigDecimal stockDisponible = stockQueryService.obtenerStockDisponible(contenedor.getId());
-
-        PoliticaDeduccionStock.ResultadoValidacion resultado = politicaDeduccionStock.evaluar(
-                contenedor.getEstado().getCodigo(), stockDisponible, request.cantidadMerma());
-
-        if (!resultado.valido()) {
-            throw new StockInsuficienteException(
-                    contenedor.getId(), request.cantidadMerma(), stockDisponible);
-        }
-
-        // Buscar configuracion de merma aplicable (empresa+producto+bodega)
-        ConfigMerma configMerma = buscarConfigMermaAplicable(
-                empresaId, contenedor.getProductoId(),
-                contenedor.getBodega() != null ? contenedor.getBodega().getId() : null);
-
-        if (configMerma != null) {
-            validarMermaContraConfig(configMerma, request.cantidadMerma(), stockDisponible,
-                    empresaId, contenedor.getProductoId(),
-                    contenedor.getBodega() != null ? contenedor.getBodega().getId() : null);
-        } else {
-            // Fallback: verificar toleranciaMerma del producto si existe
-            validarToleranciaProducto(empresaId, contenedor.getProductoId(),
-                    request.cantidadMerma(), stockDisponible);
-        }
-
-        // Usar tipoMerma de la config si existe, sino MANUAL
-        TipoMerma tipoMermaResuelto = configMerma != null ? configMerma.getTipoMerma() : TipoMerma.MANUAL;
-
-        Operacion operacion = operacionService.crearOperacion(
-                contenedor,
-                TipoOperacionCodigo.MERMA,
-                request.cantidadMerma(),
-                "Merma manual: " + (request.comentarios() != null ? request.comentarios() : ""));
-
-        RegistroMerma registro = RegistroMerma.builder()
-                .empresa(contenedor.getEmpresa())
-                .contenedor(contenedor)
-                .cantidadMerma(request.cantidadMerma())
-                .tipoMerma(tipoMermaResuelto)
-                .operacion(operacion)
-                .configMerma(configMerma)
-                .comentarios(request.comentarios())
-                .build();
-
-        registro = registroMermaRepository.save(registro);
-
-        log.info("Merma registrada: contenedor={}, cantidad={}, empresa={}",
-                contenedor.getCodigoBarras(), request.cantidadMerma(), empresaId);
-
-        eventPublisher.publishEvent(new MermaRegistradaEvent(
-                registro.getId(),
+        return registrarMerma(
                 empresaId,
-                contenedor.getId(),
-                contenedor.getProductoId(),
-                contenedor.getBodega() != null ? contenedor.getBodega().getId() : null,
+                request.contenedorId(),
                 request.cantidadMerma(),
-                tipoMermaResuelto.name()));
+                request.comentarios(),
+                TipoMerma.MANUAL,
+                "Merma manual");
+    }
 
-        return mermaMapeador.toResponse(registro);
+    @Override
+    @Transactional
+    public MermaResponse registrarAutomaticaEnRecepcion(Long empresaId,
+                                                        Long contenedorId,
+                                                        BigDecimal cantidadMerma,
+                                                        String comentarios) {
+        return registrarMerma(
+                empresaId,
+                contenedorId,
+                cantidadMerma,
+                comentarios,
+                TipoMerma.AUTOMATICA,
+                "Merma automatica en recepcion");
     }
 
     @Override
@@ -132,6 +88,88 @@ public class MermaServiceImpl implements MermaService {
     public Page<MermaResponse> listarPorEmpresa(Long empresaId, Pageable pageable) {
         return registroMermaRepository.findByEmpresaId(empresaId, pageable)
                 .map(mermaMapeador::toResponse);
+    }
+
+    private MermaResponse registrarMerma(Long empresaId,
+                                         Long contenedorId,
+                                         BigDecimal cantidadMerma,
+                                         String comentarios,
+                                         TipoMerma tipoMermaPorDefecto,
+                                         String descripcionOperacion) {
+        if (cantidadMerma == null || cantidadMerma.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new OperacionInvalidaException(
+                    "La cantidad de merma debe ser mayor a cero");
+        }
+
+        Contenedor contenedor = contenedorRepository.findByIdForUpdate(contenedorId)
+                .filter(c -> c.getEmpresa().getId().equals(empresaId))
+                .orElseThrow(() -> new EntidadNoEncontradaException("Contenedor", contenedorId));
+
+        BigDecimal stockDisponible = stockQueryService.obtenerStockDisponible(contenedor.getId());
+
+        PoliticaDeduccionStock.ResultadoValidacion resultado = politicaDeduccionStock.evaluar(
+                contenedor.getEstado().getCodigo(), stockDisponible, cantidadMerma);
+
+        if (!resultado.valido()) {
+            throw new StockInsuficienteException(
+                    contenedor.getId(), cantidadMerma, stockDisponible);
+        }
+
+        ConfigMerma configMerma = buscarConfigMermaAplicable(
+                empresaId, contenedor.getProductoId(),
+                contenedor.getBodega() != null ? contenedor.getBodega().getId() : null);
+
+        if (configMerma != null) {
+            validarMermaContraConfig(configMerma, cantidadMerma, stockDisponible,
+                    empresaId, contenedor.getProductoId(),
+                    contenedor.getBodega() != null ? contenedor.getBodega().getId() : null);
+        } else {
+            validarToleranciaProducto(empresaId, contenedor.getProductoId(),
+                    cantidadMerma, stockDisponible);
+        }
+
+        TipoMerma tipoMermaResuelto = configMerma != null && configMerma.getTipoMerma() != null
+                ? configMerma.getTipoMerma()
+                : tipoMermaPorDefecto;
+
+        Operacion operacion = operacionService.crearOperacion(
+                contenedor,
+                TipoOperacionCodigo.MERMA,
+                cantidadMerma,
+                construirDescripcionOperacion(descripcionOperacion, comentarios));
+
+        RegistroMerma registro = RegistroMerma.builder()
+                .empresa(contenedor.getEmpresa())
+                .contenedor(contenedor)
+                .cantidadMerma(cantidadMerma)
+                .tipoMerma(tipoMermaResuelto)
+                .operacion(operacion)
+                .configMerma(configMerma)
+                .comentarios(comentarios)
+                .build();
+
+        registro = registroMermaRepository.save(registro);
+
+        log.info("Merma registrada: contenedor={}, cantidad={}, empresa={}, tipo={}",
+                contenedor.getCodigoBarras(), cantidadMerma, empresaId, tipoMermaResuelto);
+
+        eventPublisher.publishEvent(new MermaRegistradaEvent(
+                registro.getId(),
+                empresaId,
+                contenedor.getId(),
+                contenedor.getProductoId(),
+                contenedor.getBodega() != null ? contenedor.getBodega().getId() : null,
+                cantidadMerma,
+                tipoMermaResuelto.name()));
+
+        return mermaMapeador.toResponse(registro);
+    }
+
+    private String construirDescripcionOperacion(String descripcionBase, String comentarios) {
+        if (comentarios == null || comentarios.isBlank()) {
+            return descripcionBase;
+        }
+        return descripcionBase + ": " + comentarios;
     }
 
     private ConfigMerma buscarConfigMermaAplicable(Long empresaId, Long productoId, Long bodegaId) {

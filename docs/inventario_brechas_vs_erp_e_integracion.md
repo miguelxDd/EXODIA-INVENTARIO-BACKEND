@@ -57,10 +57,10 @@ Conclusion practica:
 | Productos maestro | Parcial | Solo se referencia `productoId`; no hay modulo propio de productos | Integrar, no duplicar |
 | Empresas | Parcial | Existe entidad, pero no API de administracion | Resolver via servicio maestro o bootstrap externo |
 | Compras / ordenes de compra | Parcial | La referencia existe, pero no la integracion funcional | Integrar |
-| Ventas / facturacion / despacho | Bajo | No existe cierre real de inventario contra venta | Integrar con alta prioridad |
+| Ventas / facturacion / despacho | Parcial | Ya existe picking y ahora un ajuste explicito por venta facturada, pero el cierre comercial principal sigue sin definirse | Integrar con alta prioridad |
 | Requisiciones / produccion | Parcial | Hay picking y `TipoReferencia`, pero no integracion real | Integrar segun negocio |
 | Contabilidad | Parcial | Existe puerto ACL, pero solo stub | Integrar async |
-| Merma configurable / automatica | Parcial | CRUD y validaciones ya existen; falta cerrar automatizacion y motivos mas ricos | Cerrar dentro de inventario |
+| Merma configurable / automatica | Parcial | CRUD, validaciones y merma automatica en recepcion ya existen; faltan motivos/reglas mas ricas | Cerrar dentro de inventario |
 | Etiquetas / PDF | Bajo | No hay modulo de impresion ni reportes de etiquetas | Integrar o separar en servicio de reportes |
 | Inventario documental | Bajo | No existe modulo equivalente | Separar como bounded context distinto |
 | Seguridad / tenant / auditoria prod | Parcial | Ya existe perfil `prod` con JWT base, pero falta endurecer tenant e identidad extremo a extremo | Cerrar antes de produccion seria |
@@ -199,16 +199,17 @@ El backend ya tiene:
 - reservas,
 - picking,
 - operaciones de salida,
-- `TipoReferencia.VENTA`.
+- `TipoReferencia.VENTA`,
+- un endpoint dedicado para `ventas-ajustes`.
 
-Lo que no tiene es la integracion que cierre inventario contra el flujo comercial.
+Lo que no tiene es la integracion comercial real. El ajuste por venta facturada ya existe como flujo excepcional o de conciliacion, pero el punto tecnico primario de descuento todavia debe definirse entre reserva, picking, despacho o factura.
 
 ### Lo que falta
 
 - reservar stock para pedido o venta,
 - pickear contra una orden comercial real,
 - confirmar la salida definitiva por despacho o entrega,
-- reconciliar lo vendido con lo descontado.
+- reemplazar el adapter stub de ventas por integracion real.
 
 ### Decision critica
 
@@ -234,14 +235,15 @@ Facturar no siempre significa que el producto ya salio fisicamente. Por eso no r
 
 Sincrona:
 
-- `VentasAdapter.obtenerLineaPedido(...)`
-- `VentasAdapter.validarEstadoDespachable(...)`
+- `VentasAdapter.validarPedidoDespachable(...)`
+- `VentasAdapter.validarVentaFacturada(...)`
 
 Asincrona:
 
 - evento `inventario.reserva.creada`
 - evento `inventario.picking.completado`
 - evento `inventario.salida.confirmada`
+- evento `inventario.venta.ajustada` cuando se use el flujo excepcional de conciliacion
 
 ### Prioridad
 
@@ -308,6 +310,7 @@ Integracion asincrona con outbox:
 - `inventario.transferencia.recibida`
 - `inventario.recepcion.confirmada`
 - `inventario.merma.registrada`
+- `inventario.venta.ajustada`
 
 ---
 
@@ -321,13 +324,14 @@ El modelo ya existe y ya esta expuesto:
 - `RegistroMerma`
 - API REST de configuracion de merma
 
-El flujo actual registra merma manual y valida contra configuracion y tolerancia por producto. Lo que sigue faltando es la parte automatica y una semantica mas rica de motivos/reglas.
+El flujo actual registra merma manual, valida contra configuracion y tolerancia por producto, y ya puede aplicar merma automatica dentro de recepcion cuando la linea incluye `cantidadMerma`.
 
 ### Lo que falta
 
 - motivos de merma mas ricos,
 - reglas operativas mas finas por escenario,
-- procesamiento automatico si el negocio realmente lo necesita.
+- reglas mas expresivas para decidir cuando automatizar,
+- motivos de merma mas ricos para reporteria y analitica.
 
 ### Recomendacion
 

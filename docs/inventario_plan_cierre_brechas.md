@@ -20,6 +20,8 @@ Se cerraron o avanzaron estas brechas:
 - outbox persistente para eventos de negocio con reintentos basicos y `correlationId`
 - relay y dispatcher base para integraciones asincronas
 - eventos adicionales para merma, movimiento y conversion
+- activacion de merma automatica opcional en recepcion via `cantidadMerma`
+- ajuste por venta facturada usando el agregado de `Ajuste`
 - perfil `prod` con JWT resource server y validacion basica de tenant contra `X-Empresa-Id`
 - reglas mas seguras para movimientos: no desbloquear estados por mover y no mover contenedores con reservas activas
 
@@ -27,7 +29,7 @@ Brechas que siguen abiertas pero ya con base tecnica para integrarse:
 
 - implementaciones reales de `ComprasAdapter`, `VentasAdapter`, `ProduccionAdapter`, `ContabilidadAdapter`
 - idempotencia completa con replay seguro de comandos
-- cierre comercial final por despacho o venta facturada
+- cierre comercial final por despacho, dejando `ventas-ajustes` como excepcion o conciliacion
 - reportes PDF/ZPL y servicio de etiquetas
 - inventario documental como bounded context aparte
 

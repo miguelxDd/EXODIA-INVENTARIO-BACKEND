@@ -26,12 +26,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -47,6 +49,7 @@ class MermaServiceTest {
     @Mock private StockQueryService stockQueryService;
     @Mock private PoliticaDeduccionStock politicaDeduccionStock;
     @Mock private MermaMapeador mermaMapeador;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private MermaServiceImpl mermaService;
@@ -107,5 +110,32 @@ class MermaServiceTest {
 
         assertThrows(StockInsuficienteException.class,
                 () -> mermaService.registrar(1L, request));
+    }
+
+    @Test
+    void deberiaRegistrarMermaAutomaticaEnRecepcion() {
+        when(contenedorRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(contenedor));
+        when(stockQueryService.obtenerStockDisponible(1L)).thenReturn(new BigDecimal("10"));
+        when(politicaDeduccionStock.evaluar(any(), any(), any()))
+                .thenReturn(new PoliticaDeduccionStock.ResultadoValidacion(true, null));
+        when(operacionService.crearOperacion(any(), eq(TipoOperacionCodigo.MERMA), any(), contains("Merma automatica en recepcion")))
+                .thenReturn(Operacion.builder().build());
+        when(registroMermaRepository.save(any(RegistroMerma.class))).thenAnswer(inv -> {
+            RegistroMerma r = inv.getArgument(0);
+            r.setId(2L);
+            return r;
+        });
+        when(mermaMapeador.toResponse(any(RegistroMerma.class)))
+                .thenReturn(new MermaResponse(2L, 1L, new BigDecimal("1"),
+                        "AUTOMATICA", "Recepcion REC0001", 1L, null));
+
+        MermaResponse response = mermaService.registrarAutomaticaEnRecepcion(
+                1L, 1L, new BigDecimal("1"), "Recepcion REC0001");
+
+        assertNotNull(response);
+        assertEquals("AUTOMATICA", response.tipoMerma());
+        verify(operacionService).crearOperacion(
+                any(), eq(TipoOperacionCodigo.MERMA), eq(new BigDecimal("1")),
+                contains("Merma automatica en recepcion"));
     }
 }

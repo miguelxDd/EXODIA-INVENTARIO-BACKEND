@@ -221,6 +221,7 @@ Módulos expuestos:
 - `/api/v1/inventario/kardex`: `GET`
 - `/api/v1/recepciones`: `POST`, `GET/{id}`, `GET`
 - `/api/v1/ajustes`: `POST`, `GET/{id}`, `GET`
+- `/api/v1/ventas-ajustes`: `POST`
 - `/api/v1/transferencias`: `POST`, `GET/{id}`, `GET`, `PATCH /{id}/confirmar`, `PATCH /{id}/despachar`, `PATCH /{id}/recibir`, `PATCH /{id}/cancelar`
 - `/api/v1/picking`: `POST`, `PATCH /{id}/ejecutar`, `GET/{id}`, `GET`, `PATCH /{id}/cancelar`
 - `/api/v1/conteos`: `POST`, `POST /{id}/lineas`, `PATCH /{id}/aplicar`, `GET/{id}`, `GET`, `PATCH /{id}/cancelar`
@@ -274,6 +275,7 @@ curl --request POST 'http://localhost:8080/api/v1/recepciones' \
         "unidadId": 1,
         "ubicacionId": 1,
         "cantidad": 12,
+        "cantidadMerma": 1,
         "precioUnitario": 8.50,
         "numeroLote": "L-20260325",
         "fechaVencimiento": "2026-12-31"
@@ -281,6 +283,8 @@ curl --request POST 'http://localhost:8080/api/v1/recepciones' \
     ]
   }'
 ```
+
+`cantidadMerma` es opcional. Si se envia, la recepcion registra la entrada y descuenta esa porcion automaticamente como merma del mismo contenedor.
 
 Consultar stock consolidado:
 
