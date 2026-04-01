@@ -108,6 +108,7 @@ public class RecepcionServiceImpl implements RecepcionService {
         recepcion = recepcionRepository.save(recepcion);
 
         List<Long> contenedorIds = new ArrayList<>();
+        List<Long> productoIds = new ArrayList<>();
         AtomicInteger lineaNum = new AtomicInteger(0);
 
         for (RecepcionLineaRequest lineaReq : request.lineas()) {
@@ -116,6 +117,7 @@ public class RecepcionServiceImpl implements RecepcionService {
                     recepcion, empresa, bodega, estadoDisponible, lineaReq, request.proveedorId());
             recepcion.getLineas().add(linea);
             contenedorIds.add(linea.getContenedor().getId());
+            productoIds.add(lineaReq.productoId());
         }
 
         recepcion = recepcionRepository.save(recepcion);
@@ -126,7 +128,7 @@ public class RecepcionServiceImpl implements RecepcionService {
         // Publicar evento
         eventPublisher.publishEvent(new InventarioRecibidoEvent(
                 recepcion.getId(), empresaId, bodega.getId(),
-                contenedorIds, request.lineas().size()));
+                contenedorIds, productoIds.stream().distinct().toList(), request.lineas().size()));
 
         return recepcionMapeador.toResponse(recepcion);
     }

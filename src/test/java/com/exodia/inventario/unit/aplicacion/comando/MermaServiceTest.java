@@ -3,6 +3,7 @@ package com.exodia.inventario.unit.aplicacion.comando;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.impl.MermaServiceImpl;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
+import com.exodia.inventario.domain.enums.MotivoMermaCodigo;
 import com.exodia.inventario.domain.enums.TipoOperacionCodigo;
 import com.exodia.inventario.domain.modelo.catalogo.Bodega;
 import com.exodia.inventario.domain.modelo.catalogo.Empresa;
@@ -75,7 +76,8 @@ class MermaServiceTest {
 
     @Test
     void deberiaRegistrarMerma() {
-        CrearMermaRequest request = new CrearMermaRequest(1L, new BigDecimal("2"), "Merma test");
+        CrearMermaRequest request = new CrearMermaRequest(
+                1L, new BigDecimal("2"), MotivoMermaCodigo.ROTURA, "Merma test");
 
         when(contenedorRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(contenedor));
         when(stockQueryService.obtenerStockDisponible(1L)).thenReturn(new BigDecimal("10"));
@@ -90,18 +92,20 @@ class MermaServiceTest {
         });
         when(mermaMapeador.toResponse(any(RegistroMerma.class)))
                 .thenReturn(new MermaResponse(1L, 1L, new BigDecimal("2"),
-                        "MANUAL", "Merma test", 1L, null));
+                        "MANUAL", "ROTURA", "Merma test", 1L, null));
 
         MermaResponse response = mermaService.registrar(1L, request);
 
         assertNotNull(response);
+        assertEquals("ROTURA", response.motivoCodigo());
         verify(contenedorRepository).findByIdForUpdate(1L);
-        verify(operacionService).crearOperacion(any(), eq(TipoOperacionCodigo.MERMA), any(), any());
+        verify(operacionService).crearOperacion(any(), eq(TipoOperacionCodigo.MERMA), any(), contains("[ROTURA]"));
     }
 
     @Test
     void deberiaFallarSiStockInsuficiente() {
-        CrearMermaRequest request = new CrearMermaRequest(1L, new BigDecimal("100"), "Merma grande");
+        CrearMermaRequest request = new CrearMermaRequest(
+                1L, new BigDecimal("100"), MotivoMermaCodigo.OTRO, "Merma grande");
 
         when(contenedorRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(contenedor));
         when(stockQueryService.obtenerStockDisponible(1L)).thenReturn(new BigDecimal("5"));
@@ -127,15 +131,16 @@ class MermaServiceTest {
         });
         when(mermaMapeador.toResponse(any(RegistroMerma.class)))
                 .thenReturn(new MermaResponse(2L, 1L, new BigDecimal("1"),
-                        "AUTOMATICA", "Recepcion REC0001", 1L, null));
+                        "AUTOMATICA", "RECEPCION", "Recepcion REC0001", 1L, null));
 
         MermaResponse response = mermaService.registrarAutomaticaEnRecepcion(
                 1L, 1L, new BigDecimal("1"), "Recepcion REC0001");
 
         assertNotNull(response);
         assertEquals("AUTOMATICA", response.tipoMerma());
+        assertEquals("RECEPCION", response.motivoCodigo());
         verify(operacionService).crearOperacion(
                 any(), eq(TipoOperacionCodigo.MERMA), eq(new BigDecimal("1")),
-                contains("Merma automatica en recepcion"));
+                contains("[RECEPCION]"));
     }
 }

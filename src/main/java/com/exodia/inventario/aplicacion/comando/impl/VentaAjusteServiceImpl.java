@@ -8,7 +8,6 @@ import com.exodia.inventario.aplicacion.consulta.StockQueryService;
 import com.exodia.inventario.domain.enums.EstadoContenedorCodigo;
 import com.exodia.inventario.domain.enums.TipoOperacionCodigo;
 import com.exodia.inventario.domain.enums.TipoReferencia;
-import com.exodia.inventario.domain.evento.StockAjustadoEvent;
 import com.exodia.inventario.domain.evento.VentaFacturadaAjustadaEvent;
 import com.exodia.inventario.domain.modelo.ajuste.Ajuste;
 import com.exodia.inventario.domain.modelo.ajuste.AjusteLinea;
@@ -114,6 +113,7 @@ public class VentaAjusteServiceImpl implements VentaAjusteService {
         ajuste = ajusteRepository.save(ajuste);
 
         List<Long> contenedorIdsAfectados = new ArrayList<>();
+        List<Long> productoIdsAfectados = new ArrayList<>();
 
         for (AjusteVentaLineaRequest lineaReq : request.lineas()) {
             Unidad unidad = unidadRepository.findById(lineaReq.unidadId())
@@ -132,7 +132,8 @@ public class VentaAjusteServiceImpl implements VentaAjusteService {
                     lineaReq,
                     unidad,
                     asignaciones,
-                    contenedorIdsAfectados);
+                    contenedorIdsAfectados,
+                    productoIdsAfectados);
         }
 
         ajuste = ajusteRepository.save(ajuste);
@@ -148,6 +149,7 @@ public class VentaAjusteServiceImpl implements VentaAjusteService {
                 bodega.getId(),
                 request.ventaId(),
                 ajuste.getLineas().size(),
+                productoIdsAfectados.stream().distinct().toList(),
                 contenedoresUnicos));
 
         return ajusteMapeador.toResponse(ajuste);
@@ -204,7 +206,8 @@ public class VentaAjusteServiceImpl implements VentaAjusteService {
                                       AjusteVentaLineaRequest lineaReq,
                                       Unidad unidad,
                                       List<PoliticaFEFO.AsignacionContenedor> asignaciones,
-                                      List<Long> contenedorIdsAfectados) {
+                                      List<Long> contenedorIdsAfectados,
+                                      List<Long> productoIdsAfectados) {
         List<Long> idsOrdenados = asignaciones.stream()
                 .map(PoliticaFEFO.AsignacionContenedor::contenedorId)
                 .distinct()
@@ -271,15 +274,7 @@ public class VentaAjusteServiceImpl implements VentaAjusteService {
 
             ajuste.getLineas().add(linea);
             contenedorIdsAfectados.add(contenedor.getId());
-
-            eventPublisher.publishEvent(new StockAjustadoEvent(
-                    ajuste.getId(),
-                    empresa.getId(),
-                    contenedor.getId(),
-                    contenedor.getProductoId(),
-                    bodegaId,
-                    stockActual,
-                    cantidadNueva.max(BigDecimal.ZERO)));
+            productoIdsAfectados.add(contenedor.getProductoId());
         }
     }
 

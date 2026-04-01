@@ -11,6 +11,7 @@ public record MermaResponse(
     @Schema(description = "ID del contenedor") Long contenedorId,
     @Schema(description = "Cantidad de merma") BigDecimal cantidadMerma,
     @Schema(description = "Tipo de merma") String tipoMerma,
+    @Schema(description = "Motivo estructurado de la merma") String motivoCodigo,
     @Schema(description = "Comentarios") String comentarios,
     @Schema(description = "ID de la operacion generada") Long operacionId,
     @Schema(description = "Fecha de creacion") OffsetDateTime creadoEn

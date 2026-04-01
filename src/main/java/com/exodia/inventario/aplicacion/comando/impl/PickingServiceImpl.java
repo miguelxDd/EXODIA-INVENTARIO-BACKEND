@@ -148,7 +148,12 @@ public class PickingServiceImpl implements PickingService {
         log.info("Orden de picking {} ejecutada: {} lineas procesadas", orden.getNumeroOrden(), lineasProcesadas);
 
         eventPublisher.publishEvent(new PickingCompletadoEvent(
-                orden.getId(), empresaId, orden.getBodega().getId(), lineasProcesadas));
+                orden.getId(), empresaId, orden.getBodega().getId(),
+                orden.getLineas().stream()
+                        .map(PickingLinea::getProductoId)
+                        .distinct()
+                        .toList(),
+                lineasProcesadas));
 
         return pickingMapeador.toResponse(orden);
     }

@@ -18,10 +18,10 @@ Estado observado directamente en el código:
 
 - 30 entidades JPA en `domain/`
 - 20 migraciones Flyway en `src/main/resources/db/migration`
-- 18 servicios de aplicación entre escritura y consulta
-- 15 controllers REST
-- 15 mappers MapStruct
-- 15 archivos de test unitario
+- 52 archivos de aplicación entre `comando/` y `consulta/`
+- 23 controllers REST
+- 18 mappers MapStruct
+- 44 archivos de test entre unitarios e integración
 
 Cobertura funcional expuesta hoy por API:
 
@@ -29,17 +29,20 @@ Cobertura funcional expuesta hoy por API:
 - consultas: stock y kardex
 - recepciones
 - ajustes
+- ajustes por venta facturada
 - transferencias
 - picking
 - conteos físicos
 - reservas
+- movimientos internos y standby
 - extensiones: máximos y mínimos, merma, valorización y fotos de costo
+- reportes operativos y etiquetas
 
 Pendientes o incompletos a nivel de plataforma:
 
 - no hay CRUD/API para empresas
-- JWT solo está endurecido para `prod`; todavía falta cerrar por completo la resolución de tenant desde identidad
-- la auditoría usa usuario fijo
+- en `prod`, `X-Empresa-Id` ya puede resolverse desde `empresa_id` o `tenant_id` del JWT; todavía falta endurecer identidad extremo a extremo
+- en desarrollo la auditoría sigue cayendo a usuario técnico si no hay JWT
 - no hay end-to-end ejecutados en este entorno
 
 ## Stack y versiones
@@ -233,6 +236,8 @@ Módulos expuestos:
 - `/api/v1/configuracion-empresa`: `GET`, `PATCH`
 - `/api/v1/movimientos/contenedores`: `POST /{id}/mover`, `POST /{id}/enviar-standby`, `POST /{id}/sacar-standby`
 - `/api/v1/valorizacion`: `POST /foto-costo`, `GET /fotos-costo`
+- `/api/v1/reportes`: `GET /auxiliar-inventario`, `GET /auxiliar-inventario/exportar-csv`, `GET /valorizacion-actual`, `GET /valorizacion-actual/exportar-csv`
+- `/api/v1/etiquetas`: `GET /contenedores/{id}`, `GET /contenedores/{id}/zpl`, `GET /contenedores/{id}/svg`, `GET /ubicaciones/{id}`, `GET /ubicaciones/{id}/zpl`, `GET /ubicaciones/{id}/svg`
 
 ## Swagger y OpenAPI
 
@@ -295,12 +300,10 @@ curl 'http://localhost:8080/api/v1/inventario/stock/consolidado?pagina=0&tamanio
 
 ## Pruebas
 
-Hoy el repositorio contiene únicamente pruebas unitarias. No se encontraron `@SpringBootTest`, `@Testcontainers` ni suites de integración o e2e.
-
 Estado actual del testing:
 
-- 15 archivos de test unitario
-- existen tests de integración con `@SpringBootTest` y Testcontainers
+- 37 archivos de test unitario
+- 7 archivos de test de integración con `@SpringBootTest` y Testcontainers
 - 0 tests end-to-end
 
 Cobertura observada:
@@ -323,7 +326,7 @@ Aunque la cobertura todavía no es total, el repositorio ya incluye varias prueb
 - el proyecto requiere `JAVA_HOME`; sin eso `./mvnw` no arranca
 - el perfil `test` apunta a PostgreSQL local aunque `pom.xml` también declara `H2`
 - valorización ya calcula foto de costo con promedio ponderado, pero todavía requiere validación funcional de negocio antes de considerarse costeo final
-- la API ya cubre muchos flujos, pero la cobertura de pruebas sigue concentrada en piezas base
+- la API ya cubre muchos flujos, pero la cobertura automática todavía no es total
 
 ## Siguiente enfoque recomendado
 

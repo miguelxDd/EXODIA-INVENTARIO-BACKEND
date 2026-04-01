@@ -11,11 +11,15 @@ public record InventarioRecibidoEvent(
         Long empresaId,
         Long bodegaId,
         List<Long> contenedorIds,
+        List<Long> productoIds,
         int totalLineas,
         OffsetDateTime timestamp
 ) {
     public InventarioRecibidoEvent(Long recepcionId, Long empresaId, Long bodegaId,
-                                   List<Long> contenedorIds, int totalLineas) {
-        this(recepcionId, empresaId, bodegaId, contenedorIds, totalLineas, OffsetDateTime.now());
+                                   List<Long> contenedorIds,
+                                   List<Long> productoIds,
+                                   int totalLineas) {
+        this(recepcionId, empresaId, bodegaId, contenedorIds, productoIds,
+                totalLineas, OffsetDateTime.now());
     }
 }

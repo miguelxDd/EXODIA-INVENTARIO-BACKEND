@@ -12,6 +12,7 @@ public record VentaFacturadaAjustadaEvent(
         Long bodegaId,
         Long ventaId,
         int lineasProcesadas,
+        List<Long> productoIds,
         List<Long> contenedorIds,
         OffsetDateTime timestamp
 ) {
@@ -20,8 +21,10 @@ public record VentaFacturadaAjustadaEvent(
                                        Long bodegaId,
                                        Long ventaId,
                                        int lineasProcesadas,
+                                       List<Long> productoIds,
                                        List<Long> contenedorIds) {
         this(ajusteId, empresaId, bodegaId, ventaId, lineasProcesadas,
+                productoIds,
                 contenedorIds, OffsetDateTime.now());
     }
 }

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 import com.exodia.inventario.domain.base.EntidadBase;
+import com.exodia.inventario.domain.enums.MotivoMermaCodigo;
 import com.exodia.inventario.domain.enums.TipoMerma;
 import com.exodia.inventario.domain.modelo.catalogo.Empresa;
 import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
@@ -49,6 +50,10 @@ public class RegistroMerma extends EntidadBase {
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_merma", nullable = false, length = 20)
     private TipoMerma tipoMerma;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "motivo_codigo", nullable = false, length = 40)
+    private MotivoMermaCodigo motivoCodigo;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "config_merma_id")

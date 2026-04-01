@@ -2,6 +2,7 @@ package com.exodia.inventario.aplicacion.comando.impl;
 
 import com.exodia.inventario.aplicacion.comando.MermaService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
+import com.exodia.inventario.domain.enums.MotivoMermaCodigo;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
 import com.exodia.inventario.domain.evento.MermaRegistradaEvent;
 import com.exodia.inventario.domain.enums.TipoMerma;
@@ -54,8 +55,10 @@ public class MermaServiceImpl implements MermaService {
                 empresaId,
                 request.contenedorId(),
                 request.cantidadMerma(),
+                request.motivoCodigo(),
                 request.comentarios(),
                 TipoMerma.MANUAL,
+                MotivoMermaCodigo.OTRO,
                 "Merma manual");
     }
 
@@ -69,8 +72,10 @@ public class MermaServiceImpl implements MermaService {
                 empresaId,
                 contenedorId,
                 cantidadMerma,
+                null,
                 comentarios,
                 TipoMerma.AUTOMATICA,
+                MotivoMermaCodigo.RECEPCION,
                 "Merma automatica en recepcion");
     }
 
@@ -93,8 +98,10 @@ public class MermaServiceImpl implements MermaService {
     private MermaResponse registrarMerma(Long empresaId,
                                          Long contenedorId,
                                          BigDecimal cantidadMerma,
+                                         MotivoMermaCodigo motivoSolicitado,
                                          String comentarios,
                                          TipoMerma tipoMermaPorDefecto,
+                                         MotivoMermaCodigo motivoPorDefecto,
                                          String descripcionOperacion) {
         if (cantidadMerma == null || cantidadMerma.compareTo(BigDecimal.ZERO) <= 0) {
             throw new OperacionInvalidaException(
@@ -131,18 +138,22 @@ public class MermaServiceImpl implements MermaService {
         TipoMerma tipoMermaResuelto = configMerma != null && configMerma.getTipoMerma() != null
                 ? configMerma.getTipoMerma()
                 : tipoMermaPorDefecto;
+        MotivoMermaCodigo motivoResuelto = motivoSolicitado != null
+                ? motivoSolicitado
+                : motivoPorDefecto;
 
         Operacion operacion = operacionService.crearOperacion(
                 contenedor,
                 TipoOperacionCodigo.MERMA,
                 cantidadMerma,
-                construirDescripcionOperacion(descripcionOperacion, comentarios));
+                construirDescripcionOperacion(descripcionOperacion, motivoResuelto, comentarios));
 
         RegistroMerma registro = RegistroMerma.builder()
                 .empresa(contenedor.getEmpresa())
                 .contenedor(contenedor)
                 .cantidadMerma(cantidadMerma)
                 .tipoMerma(tipoMermaResuelto)
+                .motivoCodigo(motivoResuelto)
                 .operacion(operacion)
                 .configMerma(configMerma)
                 .comentarios(comentarios)
@@ -165,11 +176,17 @@ public class MermaServiceImpl implements MermaService {
         return mermaMapeador.toResponse(registro);
     }
 
-    private String construirDescripcionOperacion(String descripcionBase, String comentarios) {
-        if (comentarios == null || comentarios.isBlank()) {
-            return descripcionBase;
+    private String construirDescripcionOperacion(String descripcionBase,
+                                                 MotivoMermaCodigo motivoCodigo,
+                                                 String comentarios) {
+        String descripcion = descripcionBase;
+        if (motivoCodigo != null) {
+            descripcion = descripcion + " [" + motivoCodigo.name() + "]";
         }
-        return descripcionBase + ": " + comentarios;
+        if (comentarios == null || comentarios.isBlank()) {
+            return descripcion;
+        }
+        return descripcion + ": " + comentarios;
     }
 
     private ConfigMerma buscarConfigMermaAplicable(Long empresaId, Long productoId, Long bodegaId) {

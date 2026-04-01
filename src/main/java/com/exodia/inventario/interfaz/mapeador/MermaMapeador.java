@@ -9,6 +9,7 @@ import org.mapstruct.Mapping;
 public interface MermaMapeador {
 
     @Mapping(source = "contenedor.id", target = "contenedorId")
+    @Mapping(source = "motivoCodigo", target = "motivoCodigo")
     @Mapping(source = "operacion.id", target = "operacionId")
     MermaResponse toResponse(RegistroMerma registro);
 }

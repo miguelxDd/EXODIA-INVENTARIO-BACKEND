@@ -60,10 +60,10 @@ Conclusion practica:
 | Ventas / facturacion / despacho | Parcial | Ya existe picking y ahora un ajuste explicito por venta facturada, pero el cierre comercial principal sigue sin definirse | Integrar con alta prioridad |
 | Requisiciones / produccion | Parcial | Hay picking y `TipoReferencia`, pero no integracion real | Integrar segun negocio |
 | Contabilidad | Parcial | Existe puerto ACL, pero solo stub | Integrar async |
-| Merma configurable / automatica | Parcial | CRUD, validaciones y merma automatica en recepcion ya existen; faltan motivos/reglas mas ricas | Cerrar dentro de inventario |
-| Etiquetas / PDF | Bajo | No hay modulo de impresion ni reportes de etiquetas | Integrar o separar en servicio de reportes |
+| Merma configurable / automatica | Medio-Alto | CRUD, validaciones, motivo tipificado y merma automatica en recepcion ya existen; faltan reglas mas finas por escenario | Cerrar dentro de inventario |
+| Etiquetas / PDF | Parcial | Ya existe reimpresion operativa con ZPL y vista previa SVG; sigue faltando maquetacion PDF y spool de impresion | Mantener liviano o separar si crece |
 | Inventario documental | Bajo | No existe modulo equivalente | Separar como bounded context distinto |
-| Seguridad / tenant / auditoria prod | Parcial | Ya existe perfil `prod` con JWT base, pero falta endurecer tenant e identidad extremo a extremo | Cerrar antes de produccion seria |
+| Seguridad / tenant / auditoria prod | Medio | Ya existe perfil `prod`, validacion JWT y resolucion automatica de empresa desde claims; falta endurecer identidad extremo a extremo | Cerrar antes de produccion seria |
 | Outbox / idempotencia / observabilidad | Parcial | Ya existe outbox persistente con reintentos basicos y `correlationId`; falta idempotencia completa y observabilidad operativa | Cerrar como backlog tecnico |
 
 ---

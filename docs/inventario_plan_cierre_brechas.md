@@ -21,16 +21,18 @@ Se cerraron o avanzaron estas brechas:
 - relay y dispatcher base para integraciones asincronas
 - eventos adicionales para merma, movimiento y conversion
 - activacion de merma automatica opcional en recepcion via `cantidadMerma`
+- motivo estructurado de merma para analitica y trazabilidad
 - ajuste por venta facturada usando el agregado de `Ajuste`
 - perfil `prod` con JWT resource server y validacion basica de tenant contra `X-Empresa-Id`
+- resolucion automatica de `X-Empresa-Id` desde claims JWT en `prod`
 - reglas mas seguras para movimientos: no desbloquear estados por mover y no mover contenedores con reservas activas
+- reportes operativos de auxiliar/valorizacion actual y reimpresion basica de etiquetas en ZPL/SVG
 
 Brechas que siguen abiertas pero ya con base tecnica para integrarse:
 
 - implementaciones reales de `ComprasAdapter`, `VentasAdapter`, `ProduccionAdapter`, `ContabilidadAdapter`
 - idempotencia completa con replay seguro de comandos
 - cierre comercial final por despacho, dejando `ventas-ajustes` como excepcion o conciliacion
-- reportes PDF/ZPL y servicio de etiquetas
 - inventario documental como bounded context aparte
 
 ## Fases recomendadas
@@ -73,7 +75,7 @@ Brechas que siguen abiertas pero ya con base tecnica para integrarse:
 
 ## Fase 6. Satelites
 
-- etiquetas PDF/ZPL
+- evolucionar etiquetas a PDF/spool si la operacion realmente lo necesita
 - reportes auxiliares y BI
 - inventario documental solo si el negocio lo confirma como dominio aparte
 

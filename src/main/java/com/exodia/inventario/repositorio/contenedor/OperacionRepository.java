@@ -121,6 +121,50 @@ public interface OperacionRepository extends JpaRepository<Operacion, Long> {
             @Param("fechaHasta") OffsetDateTime fechaHasta,
             Pageable pageable);
 
+    @Query("""
+            SELECT o FROM Operacion o
+            WHERE o.empresa.id = :empresaId AND o.activo = true
+              AND o.productoId = :productoId
+              AND (:bodegaId IS NULL OR o.bodega.id = :bodegaId)
+              AND (:fechaDesde IS NULL OR o.fechaOperacion >= :fechaDesde)
+              AND (:fechaHasta IS NULL OR o.fechaOperacion <= :fechaHasta)
+            ORDER BY o.fechaOperacion ASC, o.id ASC
+            """)
+    List<Operacion> findAuxiliarInventario(
+            @Param("empresaId") Long empresaId,
+            @Param("productoId") Long productoId,
+            @Param("bodegaId") Long bodegaId,
+            @Param("fechaDesde") OffsetDateTime fechaDesde,
+            @Param("fechaHasta") OffsetDateTime fechaHasta);
+
+    @Query("""
+            SELECT COALESCE(SUM(o.cantidad), 0)
+            FROM Operacion o
+            WHERE o.empresa.id = :empresaId AND o.activo = true
+              AND o.productoId = :productoId
+              AND (:bodegaId IS NULL OR o.bodega.id = :bodegaId)
+              AND (:fechaDesde IS NULL OR o.fechaOperacion < :fechaDesde)
+            """)
+    BigDecimal obtenerAcumuladoCantidadAntesDe(
+            @Param("empresaId") Long empresaId,
+            @Param("productoId") Long productoId,
+            @Param("bodegaId") Long bodegaId,
+            @Param("fechaDesde") OffsetDateTime fechaDesde);
+
+    @Query("""
+            SELECT COALESCE(SUM(o.cantidad * o.precioUnitario), 0)
+            FROM Operacion o
+            WHERE o.empresa.id = :empresaId AND o.activo = true
+              AND o.productoId = :productoId
+              AND (:bodegaId IS NULL OR o.bodega.id = :bodegaId)
+              AND (:fechaDesde IS NULL OR o.fechaOperacion < :fechaDesde)
+            """)
+    BigDecimal obtenerAcumuladoValorAntesDe(
+            @Param("empresaId") Long empresaId,
+            @Param("productoId") Long productoId,
+            @Param("bodegaId") Long bodegaId,
+            @Param("fechaDesde") OffsetDateTime fechaDesde);
+
     // ── Costo promedio ponderado por producto + bodega (native) ───────────────────
     @Query(value = """
             SELECT COALESCE(
