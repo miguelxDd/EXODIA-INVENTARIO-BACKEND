@@ -2,6 +2,7 @@ package com.exodia.inventario.unit.aplicacion.consulta;
 
 import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.consulta.impl.StockQueryServiceImpl;
+import com.exodia.inventario.domain.modelo.extension.ConfiguracionEmpresa;
 import com.exodia.inventario.domain.servicio.CalculadorStock;
 import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
 import com.exodia.inventario.repositorio.contenedor.OperacionRepository;
@@ -116,6 +117,24 @@ class StockQueryServiceTest {
                 .obtenerContenedoresDisponiblesFEFO(1L, 100L, 1L);
 
         assertEquals(1, resultado.size());
+    }
+
+    @Test
+    void deberiaObtenerContenedoresProximosAVencerSegunConfiguracionEmpresa() {
+        ContenedorStockProjection mockProjection = mock(ContenedorStockProjection.class);
+        ConfiguracionEmpresa config = ConfiguracionEmpresa.builder()
+                .diasAlertaVencimiento(15)
+                .build();
+
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L)).thenReturn(config);
+        when(operacionRepository.findContenedoresProximosAVencer(1L, 2L, 15))
+                .thenReturn(List.of(mockProjection));
+
+        List<ContenedorStockProjection> resultado = stockQueryService
+                .obtenerContenedoresProximosAVencer(1L, 2L);
+
+        assertEquals(1, resultado.size());
+        verify(operacionRepository).findContenedoresProximosAVencer(1L, 2L, 15);
     }
 
     @Test

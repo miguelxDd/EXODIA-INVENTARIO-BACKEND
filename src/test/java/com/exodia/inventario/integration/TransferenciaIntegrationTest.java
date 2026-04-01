@@ -283,4 +283,109 @@ class TransferenciaIntegrationTest extends BaseIntegrationTest {
                         .header("X-Empresa-Id", empresaId))
                 .andExpect(status().is4xxClientError());
     }
+
+    @Test
+    void deberiaFallarTransferenciaPorContenedorConProductoInconsistente() throws Exception {
+        Long contenedorId = recepcionarStockEnOrigen(210, unidadId, 25, 8.50);
+
+        Long transferenciaId = crearYConfirmarTransferenciaPorContenedor(211, unidadId, 10, contenedorId);
+
+        mockMvc.perform(patch("/api/v1/transferencias/{id}/despachar", transferenciaId)
+                        .header("X-Empresa-Id", empresaId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigoError").value("INV-004"))
+                .andExpect(jsonPath("$.mensaje", containsString("no coincide con producto")));
+    }
+
+    @Test
+    void deberiaFallarTransferenciaPorContenedorConUnidadInconsistente() throws Exception {
+        Long unidadAlternaId = unidadRepository.findByEmpresaIdAndActivoTrue(empresaId).stream()
+                .filter(u -> "UND-TR-ALT".equals(u.getCodigo()))
+                .findFirst()
+                .map(Unidad::getId)
+                .orElseGet(() -> {
+                    Unidad nuevaUnidad = unidadRepository.save(Unidad.builder()
+                            .empresa(empresaRepository.findById(empresaId).orElseThrow())
+                            .codigo("UND-TR-ALT")
+                            .nombre("Unidad Alterna")
+                            .abreviatura("UTA")
+                            .build());
+                    return nuevaUnidad.getId();
+                });
+
+        Long contenedorId = recepcionarStockEnOrigen(212, unidadId, 30, 7.25);
+
+        Long transferenciaId = crearYConfirmarTransferenciaPorContenedor(212, unidadAlternaId, 10, contenedorId);
+
+        mockMvc.perform(patch("/api/v1/transferencias/{id}/despachar", transferenciaId)
+                        .header("X-Empresa-Id", empresaId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigoError").value("INV-004"))
+                .andExpect(jsonPath("$.mensaje", containsString("no coincide con unidad")));
+    }
+
+    private Long recepcionarStockEnOrigen(int productoId,
+                                          Long unidadId,
+                                          int cantidad,
+                                          double precioUnitario) throws Exception {
+        String recepcionJson = String.format("""
+                {
+                    "bodegaId": %d,
+                    "tipoRecepcion": "MANUAL",
+                    "lineas": [{
+                        "productoId": %d,
+                        "unidadId": %d,
+                        "ubicacionId": %d,
+                        "cantidad": %d,
+                        "precioUnitario": %.2f
+                    }]
+                }
+                """, bodegaOrigenId, productoId, unidadId, ubicacionOrigenId, cantidad, precioUnitario);
+
+        MvcResult recepcionResult = mockMvc.perform(post("/api/v1/recepciones")
+                        .header("X-Empresa-Id", empresaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(recepcionJson))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        return objectMapper.readTree(recepcionResult.getResponse().getContentAsString())
+                .at("/datos/lineas").get(0).get("contenedorId").asLong();
+    }
+
+    private Long crearYConfirmarTransferenciaPorContenedor(int productoId,
+                                                            Long unidadId,
+                                                            int cantidad,
+                                                            Long contenedorId) throws Exception {
+        String transferenciaJson = String.format("""
+                {
+                    "bodegaOrigenId": %d,
+                    "bodegaDestinoId": %d,
+                    "tipoTransferencia": "POR_CONTENEDOR",
+                    "lineas": [{
+                        "productoId": %d,
+                        "unidadId": %d,
+                        "cantidadSolicitada": %d,
+                        "contenedorId": %d
+                    }]
+                }
+                """, bodegaOrigenId, bodegaDestinoId, productoId, unidadId, cantidad, contenedorId);
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/transferencias")
+                        .header("X-Empresa-Id", empresaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transferenciaJson))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Long transferenciaId = objectMapper.readTree(createResult.getResponse().getContentAsString())
+                .at("/datos/id").asLong();
+
+        mockMvc.perform(patch("/api/v1/transferencias/{id}/confirmar", transferenciaId)
+                        .header("X-Empresa-Id", empresaId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.datos.estadoCodigo").value("CONFIRMADO"));
+
+        return transferenciaId;
+    }
 }

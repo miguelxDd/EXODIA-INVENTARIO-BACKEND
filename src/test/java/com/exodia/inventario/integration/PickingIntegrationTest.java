@@ -43,7 +43,7 @@ class PickingIntegrationTest extends BaseIntegrationTest {
     private Long unidadId;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         Empresa empresa = empresaRepository.findAll().stream()
                 .filter(e -> "PIK-TEST".equals(e.getCodigo()))
                 .findFirst()
@@ -71,6 +71,8 @@ class PickingIntegrationTest extends BaseIntegrationTest {
                 .orElseGet(() -> unidadRepository.save(
                         Unidad.builder().empresa(empresa).codigo("UND-PK").nombre("Unidad").abreviatura("UP").build()));
         unidadId = unidad.getId();
+
+        actualizarPoliticaSalida("FEFO");
     }
 
     @Test
@@ -153,10 +155,35 @@ class PickingIntegrationTest extends BaseIntegrationTest {
                 .at("/datos/id").asLong();
 
         // 4. Ejecutar picking
-        mockMvc.perform(patch("/api/v1/picking/{id}/ejecutar", pickingId)
+        MvcResult ejecucionResult = mockMvc.perform(patch("/api/v1/picking/{id}/ejecutar", pickingId)
                         .header("X-Empresa-Id", empresaId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.datos.estado").value("COMPLETADO"));
+                .andExpect(jsonPath("$.datos.estado").value("COMPLETADO"))
+                .andExpect(jsonPath("$.datos.lineas[0].cantidadPickeada").value(closeTo(40.0, 0.01)))
+                .andExpect(jsonPath("$.datos.lineas[0].asignaciones", hasSize(2)))
+                .andReturn();
+
+        JsonNode lineaEjecutada = objectMapper.readTree(ejecucionResult.getResponse().getContentAsString())
+                .at("/datos/lineas").get(0);
+        assertEquals(2, lineaEjecutada.get("asignaciones").size(),
+                "La linea debe exponer ambas asignaciones reales");
+
+        boolean asignacionA = false;
+        boolean asignacionB = false;
+        for (JsonNode asignacion : lineaEjecutada.get("asignaciones")) {
+            String barcode = asignacion.get("codigoBarras").asText();
+            if (barcodeA.equals(barcode)) {
+                asignacionA = true;
+                assertEquals(30.0, asignacion.get("cantidadPickeada").asDouble(), 0.01,
+                        "La primera asignacion debe consumir completamente LOTE-A");
+            } else if (barcodeB.equals(barcode)) {
+                asignacionB = true;
+                assertEquals(10.0, asignacion.get("cantidadPickeada").asDouble(), 0.01,
+                        "La segunda asignacion debe consumir parcialmente LOTE-B");
+            }
+        }
+        assertTrue(asignacionA, "La respuesta debe incluir la asignacion de LOTE-A");
+        assertTrue(asignacionB, "La respuesta debe incluir la asignacion de LOTE-B");
 
         // 5. Verificar stock total restante: 80 - 40 = 40
         mockMvc.perform(get("/api/v1/inventario/stock/producto-bodega")
@@ -252,5 +279,139 @@ class PickingIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(patch("/api/v1/picking/{id}/ejecutar", pickingId)
                         .header("X-Empresa-Id", empresaId))
                 .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void deberiaEjecutarPickingManualConContenedorExplicito() throws Exception {
+        actualizarPoliticaSalida("MANUAL");
+
+        MvcResult recepcionResult = recepcionarStock(301, 12, 11.50, "LOT-MANUAL", "2026-10-15");
+        JsonNode lineaRecepcion = objectMapper.readTree(recepcionResult.getResponse().getContentAsString())
+                .at("/datos/lineas").get(0);
+        Long contenedorId = lineaRecepcion.get("contenedorId").asLong();
+        String barcode = lineaRecepcion.get("codigoBarras").asText();
+
+        String pickingJson = String.format("""
+                {
+                    "bodegaId": %d,
+                    "tipoPicking": "GENERAL",
+                    "lineas": [{
+                        "productoId": 301,
+                        "unidadId": %d,
+                        "cantidadSolicitada": 5,
+                        "contenedorId": %d
+                    }]
+                }
+                """, bodegaId, unidadId, contenedorId);
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/picking")
+                        .header("X-Empresa-Id", empresaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(pickingJson))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Long pickingId = objectMapper.readTree(createResult.getResponse().getContentAsString())
+                .at("/datos/id").asLong();
+
+        mockMvc.perform(patch("/api/v1/picking/{id}/ejecutar", pickingId)
+                        .header("X-Empresa-Id", empresaId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.datos.estado").value("COMPLETADO"))
+                .andExpect(jsonPath("$.datos.lineas[0].contenedorSolicitadoId").value(contenedorId))
+                .andExpect(jsonPath("$.datos.lineas[0].contenedorId").value(contenedorId))
+                .andExpect(jsonPath("$.datos.lineas[0].cantidadPickeada").value(closeTo(5.0, 0.01)))
+                .andExpect(jsonPath("$.datos.lineas[0].asignaciones", hasSize(1)))
+                .andExpect(jsonPath("$.datos.lineas[0].asignaciones[0].contenedorId").value(contenedorId))
+                .andExpect(jsonPath("$.datos.lineas[0].asignaciones[0].codigoBarras").value(barcode))
+                .andExpect(jsonPath("$.datos.lineas[0].asignaciones[0].cantidadPickeada")
+                        .value(closeTo(5.0, 0.01)));
+
+        mockMvc.perform(get("/api/v1/inventario/stock/barcode/{codigoBarras}", barcode)
+                        .header("X-Empresa-Id", empresaId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.datos").value(closeTo(7.0, 0.01)));
+    }
+
+    @Test
+    void deberiaFallarPickingManualConContenedorDeOtroProducto() throws Exception {
+        actualizarPoliticaSalida("MANUAL");
+
+        MvcResult recepcionResult = recepcionarStock(302, 8, 9.75, "LOT-OTRO-PROD", "2026-11-01");
+        Long contenedorId = objectMapper.readTree(recepcionResult.getResponse().getContentAsString())
+                .at("/datos/lineas").get(0).get("contenedorId").asLong();
+
+        String pickingJson = String.format("""
+                {
+                    "bodegaId": %d,
+                    "tipoPicking": "GENERAL",
+                    "lineas": [{
+                        "productoId": 303,
+                        "unidadId": %d,
+                        "cantidadSolicitada": 4,
+                        "contenedorId": %d
+                    }]
+                }
+                """, bodegaId, unidadId, contenedorId);
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/picking")
+                        .header("X-Empresa-Id", empresaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(pickingJson))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Long pickingId = objectMapper.readTree(createResult.getResponse().getContentAsString())
+                .at("/datos/id").asLong();
+
+        mockMvc.perform(patch("/api/v1/picking/{id}/ejecutar", pickingId)
+                        .header("X-Empresa-Id", empresaId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigoError").value("INV-004"))
+                .andExpect(jsonPath("$.mensaje", containsString("no coincide con producto")));
+    }
+
+    private void actualizarPoliticaSalida(String politicaSalida) throws Exception {
+        String request = """
+                {
+                    "politicaSalida": "%s"
+                }
+                """.formatted(politicaSalida);
+
+        mockMvc.perform(patch("/api/v1/configuracion-empresa")
+                        .header("X-Empresa-Id", empresaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isOk());
+    }
+
+    private MvcResult recepcionarStock(int productoId,
+                                       int cantidad,
+                                       double precioUnitario,
+                                       String numeroLote,
+                                       String fechaVencimiento) throws Exception {
+        String recepcionJson = String.format("""
+                {
+                    "bodegaId": %d,
+                    "tipoRecepcion": "MANUAL",
+                    "lineas": [{
+                        "productoId": %d,
+                        "unidadId": %d,
+                        "ubicacionId": %d,
+                        "cantidad": %d,
+                        "precioUnitario": %.2f,
+                        "numeroLote": "%s",
+                        "fechaVencimiento": "%s"
+                    }]
+                }
+                """, bodegaId, productoId, unidadId, ubicacionId, cantidad,
+                precioUnitario, numeroLote, fechaVencimiento);
+
+        return mockMvc.perform(post("/api/v1/recepciones")
+                        .header("X-Empresa-Id", empresaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(recepcionJson))
+                .andExpect(status().isCreated())
+                .andReturn();
     }
 }

@@ -17,6 +17,7 @@ import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Operacion;
 import com.exodia.inventario.domain.modelo.extension.ConfiguracionEmpresa;
 import com.exodia.inventario.domain.modelo.picking.OrdenPicking;
+import com.exodia.inventario.domain.modelo.picking.PickingLineaAsignacion;
 import com.exodia.inventario.domain.modelo.picking.PickingLinea;
 import com.exodia.inventario.domain.politica.PoliticaDeduccionStock;
 import com.exodia.inventario.domain.servicio.PoliticaFEFO;
@@ -260,6 +261,11 @@ public class PickingServiceImpl implements PickingService {
             contenedoresLocked.add(c);
         }
 
+        linea.getAsignaciones().clear();
+        linea.setCantidadPickeada(BigDecimal.ZERO);
+        linea.setContenedor(null);
+        linea.setOperacion(null);
+
         // Procesar asignaciones
         for (PoliticaFEFO.AsignacionContenedor asignacion : asignaciones) {
             Contenedor contenedor = contenedoresLocked.stream()
@@ -308,9 +314,13 @@ public class PickingServiceImpl implements PickingService {
                     orden.getId(),
                     linea.getId());
 
-            linea.setContenedor(contenedor);
-            linea.setOperacion(operacion);
-            linea.setCantidadPickeada(asignacion.cantidad());
+            linea.getAsignaciones().add(PickingLineaAsignacion.builder()
+                    .pickingLinea(linea)
+                    .contenedor(contenedor)
+                    .operacion(operacion)
+                    .cantidadPickeada(asignacion.cantidad())
+                    .build());
+            linea.setCantidadPickeada(linea.getCantidadPickeada().add(asignacion.cantidad()));
 
             // Verificar si el contenedor queda agotado
             BigDecimal stockRestante = stockDisponible.subtract(asignacion.cantidad());
@@ -322,6 +332,12 @@ public class PickingServiceImpl implements PickingService {
                 contenedor.setEstado(estadoAgotado);
                 contenedorRepository.save(contenedor);
             }
+        }
+
+        if (linea.getAsignaciones().size() == 1) {
+            PickingLineaAsignacion unicaAsignacion = linea.getAsignaciones().get(0);
+            linea.setContenedor(unicaAsignacion.getContenedor());
+            linea.setOperacion(unicaAsignacion.getOperacion());
         }
     }
 }

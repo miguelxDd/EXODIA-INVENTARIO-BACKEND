@@ -2,6 +2,8 @@ package com.exodia.inventario.domain.modelo.picking;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.exodia.inventario.domain.base.EntidadBase;
 import com.exodia.inventario.domain.modelo.catalogo.Unidad;
@@ -9,10 +11,13 @@ import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
 import com.exodia.inventario.domain.modelo.contenedor.Operacion;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -60,6 +65,11 @@ public class PickingLinea extends EntidadBase {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "operacion_id")
     private Operacion operacion;
+
+    @OneToMany(mappedBy = "pickingLinea", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("creadoEn ASC, id ASC")
+    @Builder.Default
+    private List<PickingLineaAsignacion> asignaciones = new ArrayList<>();
 
     @Column(name = "creado_en", updatable = false)
     private OffsetDateTime creadoEn;

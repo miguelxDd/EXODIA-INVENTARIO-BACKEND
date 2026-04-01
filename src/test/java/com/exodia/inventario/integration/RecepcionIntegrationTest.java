@@ -2,7 +2,6 @@ package com.exodia.inventario.integration;
 
 import com.exodia.inventario.domain.modelo.catalogo.*;
 import com.exodia.inventario.repositorio.catalogo.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -12,6 +11,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.LocalDate;
+
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -20,7 +22,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RecepcionIntegrationTest extends BaseIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
     @Autowired private EmpresaRepository empresaRepository;
     @Autowired private BodegaRepository bodegaRepository;
     @Autowired private UbicacionRepository ubicacionRepository;
@@ -178,5 +179,61 @@ class RecepcionIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(recepcionJson))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deberiaListarContenedoresProximosAVencerSegunConfiguracionEmpresa() throws Exception {
+        mockMvc.perform(patch("/api/v1/configuracion-empresa")
+                        .header("X-Empresa-Id", empresaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "diasAlertaVencimiento": 7
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        LocalDate fechaCercana = LocalDate.now().plusDays(5);
+        LocalDate fechaLejana = LocalDate.now().plusDays(20);
+
+        recepcionarConVencimiento(150, 10, 12.00, "LOT-CERCA", fechaCercana);
+        recepcionarConVencimiento(151, 10, 14.00, "LOT-LEJOS", fechaLejana);
+
+        mockMvc.perform(get("/api/v1/inventario/stock/proximos-a-vencer")
+                        .header("X-Empresa-Id", empresaId)
+                        .param("bodegaId", bodegaId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.datos[?(@.numeroLote=='LOT-CERCA')]", hasSize(1)))
+                .andExpect(jsonPath("$.datos[?(@.numeroLote=='LOT-LEJOS')]", hasSize(0)));
+    }
+
+    private MvcResult recepcionarConVencimiento(int productoId,
+                                                int cantidad,
+                                                double precioUnitario,
+                                                String numeroLote,
+                                                LocalDate fechaVencimiento) throws Exception {
+        String recepcionJson = String.format("""
+                {
+                    "bodegaId": %d,
+                    "tipoRecepcion": "MANUAL",
+                    "lineas": [{
+                        "productoId": %d,
+                        "unidadId": %d,
+                        "ubicacionId": %d,
+                        "cantidad": %d,
+                        "precioUnitario": %.2f,
+                        "numeroLote": "%s",
+                        "fechaVencimiento": "%s"
+                    }]
+                }
+                """, bodegaId, productoId, unidadId, ubicacionId, cantidad,
+                precioUnitario, numeroLote, fechaVencimiento);
+
+        return mockMvc.perform(post("/api/v1/recepciones")
+                        .header("X-Empresa-Id", empresaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(recepcionJson))
+                .andExpect(status().isCreated())
+                .andReturn();
     }
 }
