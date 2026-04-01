@@ -6,7 +6,10 @@ import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.impl.PickingServiceImpl;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
 import com.exodia.inventario.domain.modelo.catalogo.*;
+import com.exodia.inventario.domain.modelo.contenedor.Contenedor;
+import com.exodia.inventario.domain.modelo.extension.ConfiguracionEmpresa;
 import com.exodia.inventario.domain.modelo.picking.OrdenPicking;
+import com.exodia.inventario.domain.modelo.picking.PickingLinea;
 import com.exodia.inventario.domain.servicio.PoliticaFEFO;
 import com.exodia.inventario.domain.politica.PoliticaDeduccionStock;
 import com.exodia.inventario.excepcion.EntidadNoEncontradaException;
@@ -138,5 +141,187 @@ class PickingServiceTest {
 
         assertThrows(EntidadNoEncontradaException.class,
                 () -> pickingService.crear(999L, request));
+    }
+
+    // ── Tests de guards nuevos (politica MANUAL, empresa, bodega, producto) ──
+
+    @Test
+    void deberiaEjecutarPickingManual() {
+        Unidad unidad = Unidad.builder().empresa(empresa).nombre("UND").abreviatura("UND").build();
+        unidad.setId(1L);
+
+        EstadoContenedor estadoDisponible = EstadoContenedor.builder()
+                .codigo("DISPONIBLE").nombre("Disponible").build();
+        estadoDisponible.setId(1L);
+
+        Contenedor contenedor = Contenedor.builder()
+                .empresa(empresa).bodega(bodega).productoId(100L).unidad(unidad)
+                .estado(estadoDisponible).codigoBarras("INV001").build();
+        contenedor.setId(10L);
+
+        PickingLinea linea = PickingLinea.builder()
+                .productoId(100L).unidad(unidad)
+                .cantidadSolicitada(new BigDecimal("5")).contenedorId(10L).build();
+        linea.setId(1L);
+
+        OrdenPicking orden = OrdenPicking.builder()
+                .empresa(empresa).bodega(bodega).estado("PENDIENTE").numeroOrden("PKG001").build();
+        orden.setId(1L);
+        orden.getLineas().add(linea);
+        linea.setOrdenPicking(orden);
+
+        ConfiguracionEmpresa config = ConfiguracionEmpresa.builder().politicaSalida("MANUAL").build();
+
+        when(ordenPickingRepository.findById(1L)).thenReturn(Optional.of(orden));
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L)).thenReturn(config);
+        when(contenedorRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(contenedor));
+        when(stockQueryService.obtenerStockDisponible(10L)).thenReturn(new BigDecimal("20"));
+        when(politicaDeduccionStock.evaluar(any(), any(), any()))
+                .thenReturn(new com.exodia.inventario.domain.politica.PoliticaDeduccionStock
+                        .ResultadoValidacion(true, "OK"));
+        when(operacionService.crearOperacion(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(com.exodia.inventario.domain.modelo.contenedor.Operacion.builder().build());
+        when(ordenPickingRepository.save(any(OrdenPicking.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(pickingMapeador.toResponse(any(OrdenPicking.class)))
+                .thenReturn(new OrdenPickingResponse(1L, "PKG001", 1L, "GENERAL",
+                        null, null, "COMPLETADO", null, List.of(), null));
+
+        OrdenPickingResponse response = pickingService.ejecutar(1L, 1L);
+
+        assertNotNull(response);
+        assertEquals("COMPLETADO", response.estado());
+    }
+
+    @Test
+    void deberiaFallarPickingManualSinContenedorId() {
+        Unidad unidad = Unidad.builder().empresa(empresa).nombre("UND").abreviatura("UND").build();
+        unidad.setId(1L);
+
+        PickingLinea linea = PickingLinea.builder()
+                .productoId(100L).unidad(unidad)
+                .cantidadSolicitada(new BigDecimal("5")).contenedorId(null).build();
+        linea.setId(1L);
+
+        OrdenPicking orden = OrdenPicking.builder()
+                .empresa(empresa).bodega(bodega).estado("PENDIENTE").numeroOrden("PKG001").build();
+        orden.setId(1L);
+        orden.getLineas().add(linea);
+        linea.setOrdenPicking(orden);
+
+        ConfiguracionEmpresa config = ConfiguracionEmpresa.builder().politicaSalida("MANUAL").build();
+
+        when(ordenPickingRepository.findById(1L)).thenReturn(Optional.of(orden));
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L)).thenReturn(config);
+
+        assertThrows(OperacionInvalidaException.class,
+                () -> pickingService.ejecutar(1L, 1L));
+    }
+
+    @Test
+    void deberiaFallarSiContenedorNoPertenecaAEmpresa() {
+        Empresa otraEmpresa = Empresa.builder().codigo("EMP2").nombre("Otra").build();
+        otraEmpresa.setId(2L);
+
+        Unidad unidad = Unidad.builder().empresa(empresa).nombre("UND").abreviatura("UND").build();
+        unidad.setId(1L);
+
+        EstadoContenedor estadoDisponible = EstadoContenedor.builder()
+                .codigo("DISPONIBLE").nombre("Disponible").build();
+
+        Contenedor contenedor = Contenedor.builder()
+                .empresa(otraEmpresa).bodega(bodega).productoId(100L).unidad(unidad)
+                .estado(estadoDisponible).codigoBarras("INV001").build();
+        contenedor.setId(10L);
+
+        PickingLinea linea = PickingLinea.builder()
+                .productoId(100L).unidad(unidad)
+                .cantidadSolicitada(new BigDecimal("5")).contenedorId(10L).build();
+        linea.setId(1L);
+
+        OrdenPicking orden = OrdenPicking.builder()
+                .empresa(empresa).bodega(bodega).estado("PENDIENTE").numeroOrden("PKG001").build();
+        orden.setId(1L);
+        orden.getLineas().add(linea);
+        linea.setOrdenPicking(orden);
+
+        ConfiguracionEmpresa config = ConfiguracionEmpresa.builder().politicaSalida("MANUAL").build();
+
+        when(ordenPickingRepository.findById(1L)).thenReturn(Optional.of(orden));
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L)).thenReturn(config);
+        when(contenedorRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(contenedor));
+
+        assertThrows(OperacionInvalidaException.class,
+                () -> pickingService.ejecutar(1L, 1L));
+    }
+
+    @Test
+    void deberiaFallarSiContenedorEnOtraBodega() {
+        Bodega otraBodega = Bodega.builder().empresa(empresa).codigo("BOD2").nombre("Otra").build();
+        otraBodega.setId(2L);
+
+        Unidad unidad = Unidad.builder().empresa(empresa).nombre("UND").abreviatura("UND").build();
+        unidad.setId(1L);
+
+        EstadoContenedor estadoDisponible = EstadoContenedor.builder()
+                .codigo("DISPONIBLE").nombre("Disponible").build();
+
+        Contenedor contenedor = Contenedor.builder()
+                .empresa(empresa).bodega(otraBodega).productoId(100L).unidad(unidad)
+                .estado(estadoDisponible).codigoBarras("INV001").build();
+        contenedor.setId(10L);
+
+        PickingLinea linea = PickingLinea.builder()
+                .productoId(100L).unidad(unidad)
+                .cantidadSolicitada(new BigDecimal("5")).contenedorId(10L).build();
+        linea.setId(1L);
+
+        OrdenPicking orden = OrdenPicking.builder()
+                .empresa(empresa).bodega(bodega).estado("PENDIENTE").numeroOrden("PKG001").build();
+        orden.setId(1L);
+        orden.getLineas().add(linea);
+        linea.setOrdenPicking(orden);
+
+        ConfiguracionEmpresa config = ConfiguracionEmpresa.builder().politicaSalida("MANUAL").build();
+
+        when(ordenPickingRepository.findById(1L)).thenReturn(Optional.of(orden));
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L)).thenReturn(config);
+        when(contenedorRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(contenedor));
+
+        assertThrows(OperacionInvalidaException.class,
+                () -> pickingService.ejecutar(1L, 1L));
+    }
+
+    @Test
+    void deberiaFallarSiContenedorProductoNoCoincide() {
+        Unidad unidad = Unidad.builder().empresa(empresa).nombre("UND").abreviatura("UND").build();
+        unidad.setId(1L);
+
+        EstadoContenedor estadoDisponible = EstadoContenedor.builder()
+                .codigo("DISPONIBLE").nombre("Disponible").build();
+
+        Contenedor contenedor = Contenedor.builder()
+                .empresa(empresa).bodega(bodega).productoId(999L).unidad(unidad)
+                .estado(estadoDisponible).codigoBarras("INV001").build();
+        contenedor.setId(10L);
+
+        PickingLinea linea = PickingLinea.builder()
+                .productoId(100L).unidad(unidad)
+                .cantidadSolicitada(new BigDecimal("5")).contenedorId(10L).build();
+        linea.setId(1L);
+
+        OrdenPicking orden = OrdenPicking.builder()
+                .empresa(empresa).bodega(bodega).estado("PENDIENTE").numeroOrden("PKG001").build();
+        orden.setId(1L);
+        orden.getLineas().add(linea);
+        linea.setOrdenPicking(orden);
+
+        ConfiguracionEmpresa config = ConfiguracionEmpresa.builder().politicaSalida("MANUAL").build();
+
+        when(ordenPickingRepository.findById(1L)).thenReturn(Optional.of(orden));
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L)).thenReturn(config);
+        when(contenedorRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(contenedor));
+
+        assertThrows(OperacionInvalidaException.class,
+                () -> pickingService.ejecutar(1L, 1L));
     }
 }

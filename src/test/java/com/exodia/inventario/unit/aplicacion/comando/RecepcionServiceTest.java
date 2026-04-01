@@ -22,6 +22,7 @@ import com.exodia.inventario.repositorio.catalogo.EstadoContenedorRepository;
 import com.exodia.inventario.repositorio.catalogo.UnidadRepository;
 import com.exodia.inventario.repositorio.catalogo.UbicacionRepository;
 import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
+import com.exodia.inventario.infraestructura.integracion.ProductoAdapter;
 import com.exodia.inventario.repositorio.extension.ConfiguracionProductoRepository;
 import com.exodia.inventario.repositorio.recepcion.RecepcionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +58,7 @@ class RecepcionServiceTest {
     @Mock private BarcodeService barcodeService;
     @Mock private LoteService loteService;
     @Mock private ConfiguracionProductoRepository configuracionProductoRepository;
+    @Mock private ProductoAdapter productoAdapter;
     @Mock private RecepcionMapeador recepcionMapeador;
     @Mock private ApplicationEventPublisher eventPublisher;
 
@@ -103,6 +105,7 @@ class RecepcionServiceTest {
         when(bodegaRepository.findById(1L)).thenReturn(Optional.of(bodega));
         when(estadoContenedorRepository.findByCodigo(EstadoContenedorCodigo.DISPONIBLE.getCodigo()))
                 .thenReturn(Optional.of(estadoDisponible));
+        when(productoAdapter.existeProducto(1L, 100L)).thenReturn(true);
         when(unidadRepository.findById(1L)).thenReturn(Optional.of(unidad));
         when(ubicacionRepository.findById(1L)).thenReturn(Optional.of(ubicacion));
         when(barcodeService.generarBarcode(eq(1L), eq("REC"))).thenReturn("REC00000001");

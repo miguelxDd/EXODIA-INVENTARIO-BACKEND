@@ -4,6 +4,7 @@ import com.exodia.inventario.aplicacion.comando.BarcodeService;
 import com.exodia.inventario.aplicacion.comando.LoteService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.RecepcionService;
+import com.exodia.inventario.infraestructura.integracion.ProductoAdapter;
 import com.exodia.inventario.domain.modelo.extension.ConfiguracionProducto;
 import com.exodia.inventario.repositorio.extension.ConfiguracionProductoRepository;
 import com.exodia.inventario.domain.enums.EstadoContenedorCodigo;
@@ -63,6 +64,7 @@ public class RecepcionServiceImpl implements RecepcionService {
     private final BarcodeService barcodeService;
     private final LoteService loteService;
     private final ConfiguracionProductoRepository configuracionProductoRepository;
+    private final ProductoAdapter productoAdapter;
     private final RecepcionMapeador recepcionMapeador;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -141,6 +143,11 @@ public class RecepcionServiceImpl implements RecepcionService {
     private RecepcionLinea procesarLinea(Recepcion recepcion, Empresa empresa, Bodega bodega,
                                          EstadoContenedor estadoDisponible,
                                          RecepcionLineaRequest lineaReq, Long proveedorIdHeader) {
+
+        // Validar que el producto existe en el servicio de catalogos
+        if (!productoAdapter.existeProducto(empresa.getId(), lineaReq.productoId())) {
+            throw new EntidadNoEncontradaException("Producto", lineaReq.productoId());
+        }
 
         Unidad unidad = unidadRepository.findById(lineaReq.unidadId())
                 .filter(u -> u.getEmpresa().getId().equals(empresa.getId()))
