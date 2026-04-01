@@ -134,6 +134,7 @@ Importante:
 - [`db/inventario_mapeo_bd_java.md`](db/inventario_mapeo_bd_java.md): mapeo entre nombres de BD y clases Java
 - [`db/inventario_ddl_postgresql_es.sql`](db/inventario_ddl_postgresql_es.sql): DDL de referencia en PostgreSQL
 - [`baseDeERPdeMigracion.md`](baseDeERPdeMigracion.md): análisis técnico del inventario legado a replicar o mejorar
+- [`docs/qa_cierre_inventario.md`](docs/qa_cierre_inventario.md): checklist de QA y validación manual para cierre funcional
 - [`plan.md`](plan.md): roadmap por fases
 
 ## Prerrequisitos
