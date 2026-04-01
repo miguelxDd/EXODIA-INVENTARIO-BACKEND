@@ -249,6 +249,9 @@ public class PickingServiceImpl implements PickingService {
                 .sorted()
                 .toList();
 
+        Long empresaId = orden.getEmpresa().getId();
+        Long bodegaId = orden.getBodega().getId();
+
         // Adquirir locks pesimistas en orden
         List<Contenedor> contenedoresLocked = new ArrayList<>();
         for (Long id : idsOrdenados) {
@@ -263,6 +266,27 @@ public class PickingServiceImpl implements PickingService {
                     .filter(c -> c.getId().equals(asignacion.contenedorId()))
                     .findFirst()
                     .orElseThrow();
+
+            // Validar que el contenedor pertenece a la empresa, bodega y producto correctos
+            if (!contenedor.getEmpresa().getId().equals(empresaId)) {
+                throw new OperacionInvalidaException(String.format(
+                        "Contenedor %d no pertenece a la empresa %d", contenedor.getId(), empresaId));
+            }
+            if (!contenedor.getBodega().getId().equals(bodegaId)) {
+                throw new OperacionInvalidaException(String.format(
+                        "Contenedor %d esta en bodega %d, no en la bodega de la orden %d",
+                        contenedor.getId(), contenedor.getBodega().getId(), bodegaId));
+            }
+            if (!contenedor.getProductoId().equals(linea.getProductoId())) {
+                throw new OperacionInvalidaException(String.format(
+                        "Contenedor %d es de producto %d, no coincide con producto %d de la linea",
+                        contenedor.getId(), contenedor.getProductoId(), linea.getProductoId()));
+            }
+            if (!contenedor.getUnidad().getId().equals(linea.getUnidad().getId())) {
+                throw new OperacionInvalidaException(String.format(
+                        "Contenedor %d tiene unidad %d, no coincide con unidad %d de la linea",
+                        contenedor.getId(), contenedor.getUnidad().getId(), linea.getUnidad().getId()));
+            }
 
             // Validar stock disponible con lock
             BigDecimal stockDisponible = stockQueryService.obtenerStockDisponible(contenedor.getId());

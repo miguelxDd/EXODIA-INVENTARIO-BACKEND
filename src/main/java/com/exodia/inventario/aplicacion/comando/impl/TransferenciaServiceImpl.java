@@ -554,6 +554,18 @@ public class TransferenciaServiceImpl implements TransferenciaService {
                         contenedor.getId(), transferencia.getBodegaOrigen().getCodigo()));
             }
 
+            // Validar que el contenedor coincide con producto y unidad de la linea
+            if (!contenedor.getProductoId().equals(linea.getProductoId())) {
+                throw new OperacionInvalidaException(String.format(
+                        "Contenedor %d es de producto %d, no coincide con producto %d de la linea",
+                        contenedor.getId(), contenedor.getProductoId(), linea.getProductoId()));
+            }
+            if (!contenedor.getUnidad().getId().equals(linea.getUnidad().getId())) {
+                throw new OperacionInvalidaException(String.format(
+                        "Contenedor %d tiene unidad %d, no coincide con unidad %d de la linea",
+                        contenedor.getId(), contenedor.getUnidad().getId(), linea.getUnidad().getId()));
+            }
+
             BigDecimal stockDisponible = stockQueryService.obtenerStockDisponible(
                     contenedor.getId());
 
