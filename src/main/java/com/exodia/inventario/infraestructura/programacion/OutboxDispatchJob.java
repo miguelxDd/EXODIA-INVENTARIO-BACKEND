@@ -5,6 +5,7 @@ import com.exodia.inventario.infraestructura.integracion.OutboxRelay;
 import com.exodia.inventario.infraestructura.integracion.OutboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +20,13 @@ public class OutboxDispatchJob {
     private final OutboxService outboxService;
     private final OutboxRelay outboxRelay;
 
+    @Value("${inventario.outbox.max-intentos:5}")
+    private int maxIntentos;
+
     @Scheduled(cron = "0 */1 * * * ?")
     @Transactional
     public void publicarPendientes() {
-        List<EventoOutbox> pendientes = outboxService.obtenerPendientes();
+        List<EventoOutbox> pendientes = outboxService.obtenerPendientesOReintentables(maxIntentos);
         if (pendientes.isEmpty()) {
             return;
         }

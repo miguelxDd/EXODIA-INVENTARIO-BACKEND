@@ -202,6 +202,7 @@ X-Empresa-Id: 1
 ## API disponible hoy
 
 Casi toda la API es multiempresa y espera el header `X-Empresa-Id`.
+Tambien puedes enviar `X-Correlation-Id`; si no se envia, el servicio genera uno y lo devuelve en la respuesta para trazabilidad.
 
 Nota importante sobre rutas:
 

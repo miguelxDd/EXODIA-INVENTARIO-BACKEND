@@ -10,5 +10,7 @@ import java.util.List;
 @Repository
 public interface EventoOutboxRepository extends JpaRepository<EventoOutbox, Long> {
 
-    List<EventoOutbox> findTop100ByEstadoOrderByCreadoEnAsc(EstadoOutbox estado);
+    List<EventoOutbox> findTop100ByEstadoInAndIntentosLessThanOrderByCreadoEnAsc(
+            List<EstadoOutbox> estados,
+            Integer intentosMaximos);
 }

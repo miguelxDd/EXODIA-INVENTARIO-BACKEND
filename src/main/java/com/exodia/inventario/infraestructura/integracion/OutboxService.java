@@ -10,16 +10,22 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class OutboxService {
+
+    private static final String CORRELATION_ID_KEY = "correlationId";
+    private static final int MAX_CORRELATION_ID_LENGTH = 100;
+    private static final int MAX_ERROR_LENGTH = 2000;
 
     private final EventoOutboxRepository eventoOutboxRepository;
     private final EmpresaRepository empresaRepository;
@@ -41,7 +47,7 @@ public class OutboxService {
                 .aggregateId(aggregateId)
                 .eventType(eventType)
                 .payloadJson(serializar(payload))
-                .correlationId(correlationId)
+                .correlationId(resolverCorrelationId(correlationId))
                 .estado(EstadoOutbox.PENDIENTE)
                 .build();
 
@@ -49,8 +55,10 @@ public class OutboxService {
     }
 
     @Transactional(readOnly = true)
-    public List<EventoOutbox> obtenerPendientes() {
-        return eventoOutboxRepository.findTop100ByEstadoOrderByCreadoEnAsc(EstadoOutbox.PENDIENTE);
+    public List<EventoOutbox> obtenerPendientesOReintentables(int maxIntentos) {
+        return eventoOutboxRepository.findTop100ByEstadoInAndIntentosLessThanOrderByCreadoEnAsc(
+                List.of(EstadoOutbox.PENDIENTE, EstadoOutbox.FALLIDO),
+                maxIntentos);
     }
 
     @Transactional
@@ -68,7 +76,7 @@ public class OutboxService {
         EventoOutbox eventoOutbox = buscar(eventoId);
         eventoOutbox.setEstado(EstadoOutbox.FALLIDO);
         eventoOutbox.setIntentos(eventoOutbox.getIntentos() + 1);
-        eventoOutbox.setUltimoError(exception.getMessage());
+        eventoOutbox.setUltimoError(truncar(exception.getMessage(), MAX_ERROR_LENGTH));
         eventoOutboxRepository.save(eventoOutbox);
     }
 
@@ -84,5 +92,23 @@ public class OutboxService {
             log.error("No se pudo serializar payload de outbox: {}", e.getMessage());
             throw new IllegalStateException("No se pudo serializar evento de outbox", e);
         }
+    }
+
+    private String resolverCorrelationId(String correlationId) {
+        String candidato = correlationId;
+        if (candidato == null || candidato.isBlank()) {
+            candidato = MDC.get(CORRELATION_ID_KEY);
+        }
+        if (candidato == null || candidato.isBlank()) {
+            candidato = UUID.randomUUID().toString();
+        }
+        return truncar(candidato, MAX_CORRELATION_ID_LENGTH);
+    }
+
+    private String truncar(String valor, int longitudMaxima) {
+        if (valor == null || valor.length() <= longitudMaxima) {
+            return valor;
+        }
+        return valor.substring(0, longitudMaxima);
     }
 }

@@ -64,7 +64,7 @@ Conclusion practica:
 | Etiquetas / PDF | Bajo | No hay modulo de impresion ni reportes de etiquetas | Integrar o separar en servicio de reportes |
 | Inventario documental | Bajo | No existe modulo equivalente | Separar como bounded context distinto |
 | Seguridad / tenant / auditoria prod | Parcial | Ya existe perfil `prod` con JWT base, pero falta endurecer tenant e identidad extremo a extremo | Cerrar antes de produccion seria |
-| Outbox / idempotencia / observabilidad | Parcial | Ya existe outbox persistente; falta idempotencia completa y observabilidad operativa | Cerrar como backlog tecnico |
+| Outbox / idempotencia / observabilidad | Parcial | Ya existe outbox persistente con reintentos basicos y `correlationId`; falta idempotencia completa y observabilidad operativa | Cerrar como backlog tecnico |
 
 ---
 

@@ -100,6 +100,8 @@ public class MovimientoContenedorServiceImpl implements MovimientoContenedorServ
         Long ubicacionOrigenId = contenedor.getUbicacion().getId();
         String estadoAnterior = contenedor.getEstado().getCodigo();
 
+        validarMovimientoPermitido(contenedor, destinoEsStandby);
+
         if (ubicacionOrigenId.equals(ubicacionDestino.getId())) {
             throw new OperacionInvalidaException("La ubicacion destino no puede ser la misma ubicacion origen");
         }
@@ -108,6 +110,13 @@ public class MovimientoContenedorServiceImpl implements MovimientoContenedorServ
         if (stockActual.compareTo(BigDecimal.ZERO) <= 0) {
             throw new OperacionInvalidaException(
                     "No se puede mover un contenedor sin stock disponible en kardex");
+        }
+
+        BigDecimal cantidadReservada = stockQueryService.obtenerCantidadReservada(contenedor.getId());
+        if (cantidadReservada.compareTo(BigDecimal.ZERO) > 0) {
+            throw new OperacionInvalidaException(String.format(
+                    "No se puede mover el contenedor %s porque tiene %s unidades reservadas activas",
+                    contenedor.getCodigoBarras(), cantidadReservada.toPlainString()));
         }
 
         String comentarioBase = comentarios != null && !comentarios.isBlank()
@@ -126,7 +135,7 @@ public class MovimientoContenedorServiceImpl implements MovimientoContenedorServ
 
         contenedor.setBodega(ubicacionDestino.getBodega());
         contenedor.setUbicacion(ubicacionDestino);
-        contenedor.setEstado(resolverEstadoDestino(destinoEsStandby));
+        contenedor.setEstado(resolverEstadoDestino(contenedor, destinoEsStandby));
         contenedorRepository.save(contenedor);
 
         Operacion entrada = operacionService.crearOperacion(
@@ -179,11 +188,33 @@ public class MovimientoContenedorServiceImpl implements MovimientoContenedorServ
                 .orElseThrow(() -> new EntidadNoEncontradaException("Ubicacion", ubicacionId));
     }
 
-    private EstadoContenedor resolverEstadoDestino(boolean destinoEsStandby) {
-        EstadoContenedorCodigo codigo = destinoEsStandby
-                ? EstadoContenedorCodigo.EN_STANDBY
-                : EstadoContenedorCodigo.DISPONIBLE;
+    private void validarMovimientoPermitido(Contenedor contenedor, boolean destinoEsStandby) {
+        String estadoActual = contenedor.getEstado().getCodigo();
 
+        if (!destinoEsStandby) {
+            return;
+        }
+
+        if (!EstadoContenedorCodigo.DISPONIBLE.getCodigo().equals(estadoActual)) {
+            throw new OperacionInvalidaException(String.format(
+                    "Solo se pueden enviar a standby contenedores en estado DISPONIBLE. Estado actual: %s",
+                    estadoActual));
+        }
+    }
+
+    private EstadoContenedor resolverEstadoDestino(Contenedor contenedor, boolean destinoEsStandby) {
+        if (destinoEsStandby) {
+            return buscarEstado(EstadoContenedorCodigo.EN_STANDBY);
+        }
+
+        if (EstadoContenedorCodigo.EN_STANDBY.getCodigo().equals(contenedor.getEstado().getCodigo())) {
+            return buscarEstado(EstadoContenedorCodigo.DISPONIBLE);
+        }
+
+        return contenedor.getEstado();
+    }
+
+    private EstadoContenedor buscarEstado(EstadoContenedorCodigo codigo) {
         return estadoContenedorRepository.findByCodigo(codigo.getCodigo())
                 .orElseThrow(() -> new OperacionInvalidaException(
                         "Estado de contenedor no encontrado: " + codigo.getCodigo()));

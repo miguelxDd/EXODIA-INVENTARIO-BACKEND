@@ -62,3 +62,5 @@ inventario:
     longitud-padding: 8
   reserva:
     horas-expiracion-defecto: 48
+  outbox:
+    max-intentos: 5

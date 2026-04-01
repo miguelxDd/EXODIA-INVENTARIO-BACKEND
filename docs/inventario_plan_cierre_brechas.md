@@ -17,10 +17,11 @@ Se cerraron o avanzaron estas brechas:
 - movimientos internos de contenedores y uso explicito de `ubicacionStandby`
 - conversion operativa de inventario por contenedor
 - validacion sincronica de referencias externas para compras, ventas y produccion via adapters
-- outbox persistente para eventos de negocio
+- outbox persistente para eventos de negocio con reintentos basicos y `correlationId`
 - relay y dispatcher base para integraciones asincronas
 - eventos adicionales para merma, movimiento y conversion
 - perfil `prod` con JWT resource server y validacion basica de tenant contra `X-Empresa-Id`
+- reglas mas seguras para movimientos: no desbloquear estados por mover y no mover contenedores con reservas activas
 
 Brechas que siguen abiertas pero ya con base tecnica para integrarse:
 
