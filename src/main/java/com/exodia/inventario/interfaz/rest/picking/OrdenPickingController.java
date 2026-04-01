@@ -52,7 +52,7 @@ public class OrdenPickingController {
     }
 
     @PatchMapping("/{id}/ejecutar")
-    @Operation(summary = "Ejecutar picking", description = "Ejecuta el picking usando FEFO, crea operaciones de salida")
+    @Operation(summary = "Ejecutar picking", description = "Ejecuta el picking segun la politica configurada (FEFO/FIFO/MANUAL)")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Picking ejecutado"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Estado invalido"),

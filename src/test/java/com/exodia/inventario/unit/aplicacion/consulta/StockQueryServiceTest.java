@@ -1,7 +1,9 @@
 package com.exodia.inventario.unit.aplicacion.consulta;
 
+import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.consulta.impl.StockQueryServiceImpl;
 import com.exodia.inventario.domain.servicio.CalculadorStock;
+import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
 import com.exodia.inventario.repositorio.contenedor.OperacionRepository;
 import com.exodia.inventario.repositorio.contenedor.ReservaRepository;
 import com.exodia.inventario.repositorio.proyeccion.ContenedorStockProjection;
@@ -31,10 +33,16 @@ class StockQueryServiceTest {
     private OperacionRepository operacionRepository;
 
     @Mock
+    private ContenedorRepository contenedorRepository;
+
+    @Mock
     private ReservaRepository reservaRepository;
 
     @Mock
     private CalculadorStock calculadorStock;
+
+    @Mock
+    private ConfiguracionEmpresaService configuracionEmpresaService;
 
     @InjectMocks
     private StockQueryServiceImpl stockQueryService;

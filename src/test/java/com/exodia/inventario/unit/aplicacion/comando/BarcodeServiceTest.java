@@ -109,6 +109,8 @@ class BarcodeServiceTest {
 
         when(secuenciaBarcodeRepository.findByEmpresaIdAndPrefijoForUpdate(1L, "REC"))
                 .thenReturn(Optional.of(secuenciaRec));
+        when(configuracionEmpresaService.obtenerEntidadOCrear(1L))
+                .thenReturn(configuracionEmpresa);
         when(secuenciaBarcodeRepository.save(any(SecuenciaBarcode.class)))
                 .thenReturn(secuenciaRec);
 

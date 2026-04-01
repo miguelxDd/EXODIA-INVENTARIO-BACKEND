@@ -19,6 +19,6 @@ public interface ConfigMermaRepository extends JpaRepository<ConfigMerma, Long> 
             Long empresaId1, Long productoId1, Long bodegaId,
             Long empresaId2, Long productoId2);
 
-    Optional<ConfigMerma> findFirstByEmpresaIdAndActivoTrueAndProductoIdAndBodegaId(
+    Optional<ConfigMerma> findFirstByEmpresaIdAndActivoTrueAndProductoIdAndBodegaIdOrderByIdAsc(
             Long empresaId, Long productoId, Long bodegaId);
 }

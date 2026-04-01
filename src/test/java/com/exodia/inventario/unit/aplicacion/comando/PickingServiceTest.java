@@ -80,7 +80,7 @@ class PickingServiceTest {
         unidad.setId(1L);
         unidad.setActivo(true);
 
-        PickingLineaRequest lineaReq = new PickingLineaRequest(100L, 1L, new BigDecimal("5"));
+        PickingLineaRequest lineaReq = new PickingLineaRequest(100L, 1L, new BigDecimal("5"), null);
         CrearOrdenPickingRequest request = new CrearOrdenPickingRequest(
                 1L, com.exodia.inventario.domain.enums.TipoPicking.GENERAL,
                 null, null, "Test", List.of(lineaReq));

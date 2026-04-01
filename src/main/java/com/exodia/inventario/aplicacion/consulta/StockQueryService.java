@@ -108,6 +108,15 @@ public interface StockQueryService {
                                                                        Long bodegaId);
 
     /**
+     * Obtiene contenedores proximos a vencer segun diasAlertaVencimiento de ConfiguracionEmpresa.
+     *
+     * @param empresaId ID de la empresa
+     * @param bodegaId  filtro por bodega (opcional)
+     * @return contenedores con stock > 0 cuya fecha de vencimiento esta dentro del umbral
+     */
+    List<ContenedorStockProjection> obtenerContenedoresProximosAVencer(Long empresaId, Long bodegaId);
+
+    /**
      * Obtiene el costo promedio ponderado de un producto en una bodega.
      * Se calcula como SUM(precioUnitario * stock) / SUM(stock) sobre contenedores con stock > 0.
      *

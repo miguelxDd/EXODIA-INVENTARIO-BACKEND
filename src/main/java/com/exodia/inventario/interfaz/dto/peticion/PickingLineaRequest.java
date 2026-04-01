@@ -10,5 +10,6 @@ import java.math.BigDecimal;
 public record PickingLineaRequest(
     @Schema(description = "ID del producto") @NotNull Long productoId,
     @Schema(description = "ID de la unidad") @NotNull Long unidadId,
-    @Schema(description = "Cantidad solicitada") @NotNull @Positive BigDecimal cantidadSolicitada
+    @Schema(description = "Cantidad solicitada") @NotNull @Positive BigDecimal cantidadSolicitada,
+    @Schema(description = "ID del contenedor (requerido cuando politicaSalida = MANUAL)") Long contenedorId
 ) {}

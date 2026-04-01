@@ -397,6 +397,7 @@ public class TransferenciaServiceImpl implements TransferenciaService {
     /**
      * Resuelve contenedores segun politica configurada (FEFO/FIFO) para una linea POR_PRODUCTO.
      * Adquiere locks en orden ascendente por ID para evitar deadlocks.
+     * Politica MANUAL no es compatible con POR_PRODUCTO (requiere POR_CONTENEDOR).
      */
     private List<TransferenciaContenedor> resolverContenedoresFEFO(
             Transferencia transferencia, TransferenciaLinea linea,
@@ -405,6 +406,12 @@ public class TransferenciaServiceImpl implements TransferenciaService {
         // Consultar politica de salida configurada
         ConfiguracionEmpresa configEmpresa = configuracionEmpresaService.obtenerEntidadOCrear(empresaId);
         String politica = configEmpresa.getPoliticaSalida();
+
+        if ("MANUAL".equals(politica)) {
+            throw new OperacionInvalidaException(
+                    "Politica MANUAL no es compatible con transferencia POR_PRODUCTO. "
+                            + "Use tipo POR_CONTENEDOR o cambie la politica de salida.");
+        }
 
         // Obtener contenedores disponibles segun politica
         List<ContenedorStockProjection> disponibles = "FIFO".equals(politica)
@@ -422,9 +429,10 @@ public class TransferenciaServiceImpl implements TransferenciaService {
                         null, p.getCantidadDisponible()))
                 .toList();
 
-        // Seleccionar contenedores para cubrir la cantidad solicitada
-        List<PoliticaFEFO.AsignacionContenedor> asignaciones = politicaFEFO
-                .seleccionarContenedores(contenedoresConStock, linea.getCantidadSolicitada());
+        // FIFO: respetar orden del query (creado_en ASC). FEFO: reordenar por vencimiento.
+        List<PoliticaFEFO.AsignacionContenedor> asignaciones = "FIFO".equals(politica)
+                ? politicaFEFO.seleccionarContenedoresEnOrden(contenedoresConStock, linea.getCantidadSolicitada())
+                : politicaFEFO.seleccionarContenedores(contenedoresConStock, linea.getCantidadSolicitada());
 
         if (asignaciones.isEmpty()) {
             throw new OperacionInvalidaException(String.format(

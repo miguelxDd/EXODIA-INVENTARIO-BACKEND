@@ -22,6 +22,7 @@ import com.exodia.inventario.repositorio.catalogo.EstadoContenedorRepository;
 import com.exodia.inventario.repositorio.catalogo.UnidadRepository;
 import com.exodia.inventario.repositorio.catalogo.UbicacionRepository;
 import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
+import com.exodia.inventario.repositorio.extension.ConfiguracionProductoRepository;
 import com.exodia.inventario.repositorio.recepcion.RecepcionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -55,6 +56,7 @@ class RecepcionServiceTest {
     @Mock private OperacionService operacionService;
     @Mock private BarcodeService barcodeService;
     @Mock private LoteService loteService;
+    @Mock private ConfiguracionProductoRepository configuracionProductoRepository;
     @Mock private RecepcionMapeador recepcionMapeador;
     @Mock private ApplicationEventPublisher eventPublisher;
 

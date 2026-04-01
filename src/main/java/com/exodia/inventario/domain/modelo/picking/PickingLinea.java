@@ -50,6 +50,9 @@ public class PickingLinea extends EntidadBase {
     @Builder.Default
     private BigDecimal cantidadPickeada = BigDecimal.ZERO;
 
+    @Column(name = "contenedor_solicitado_id")
+    private Long contenedorId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "contenedor_id")
     private Contenedor contenedor;

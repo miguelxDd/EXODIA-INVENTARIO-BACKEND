@@ -112,6 +112,21 @@ public class StockController {
         return ResponseEntity.ok(ApiResponse.exitoso(response));
     }
 
+    @GetMapping("/proximos-a-vencer")
+    @Operation(summary = "Contenedores proximos a vencer",
+            description = "Contenedores con stock cuya fecha de vencimiento esta dentro del umbral configurado (diasAlertaVencimiento)")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Contenedores proximos a vencer")
+    })
+    public ResponseEntity<ApiResponse<List<ContenedorStockResponse>>> proximosAVencer(
+            @RequestHeader("X-Empresa-Id") Long empresaId,
+            @RequestParam(required = false) Long bodegaId) {
+        List<ContenedorStockProjection> projections =
+                stockQueryService.obtenerContenedoresProximosAVencer(empresaId, bodegaId);
+        List<ContenedorStockResponse> response = stockMapeador.toResponseList(projections);
+        return ResponseEntity.ok(ApiResponse.exitoso(response));
+    }
+
     @GetMapping("/disponible-fefo")
     @Operation(summary = "Contenedores disponibles FEFO", description = "Contenedores con stock disponible ordenados por fecha de vencimiento ASC")
     @ApiResponses({

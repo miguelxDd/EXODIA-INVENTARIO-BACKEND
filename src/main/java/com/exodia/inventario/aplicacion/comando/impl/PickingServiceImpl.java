@@ -100,6 +100,7 @@ public class PickingServiceImpl implements PickingService {
                     .productoId(lineaReq.productoId())
                     .unidad(unidad)
                     .cantidadSolicitada(lineaReq.cantidadSolicitada())
+                    .contenedorId(lineaReq.contenedorId())
                     .build();
 
             orden.getLineas().add(linea);
@@ -189,6 +190,11 @@ public class PickingServiceImpl implements PickingService {
         ConfiguracionEmpresa configEmpresa = configuracionEmpresaService.obtenerEntidadOCrear(empresaId);
         String politica = configEmpresa.getPoliticaSalida();
 
+        if ("MANUAL".equals(politica)) {
+            procesarLineaManual(orden, linea);
+            return;
+        }
+
         // Obtener contenedores disponibles segun politica
         List<ContenedorStockProjection> disponibles = "FIFO".equals(politica)
                 ? stockQueryService.obtenerContenedoresDisponiblesFIFO(empresaId, linea.getProductoId(), bodegaId)
@@ -199,8 +205,10 @@ public class PickingServiceImpl implements PickingService {
                         p.getContenedorId(), p.getFechaVencimiento(), null, p.getCantidadDisponible()))
                 .toList();
 
-        List<PoliticaFEFO.AsignacionContenedor> asignaciones = politicaFEFO
-                .seleccionarContenedores(contenedoresConStock, linea.getCantidadSolicitada());
+        // FIFO: respetar orden del query (creado_en ASC). FEFO: reordenar por vencimiento.
+        List<PoliticaFEFO.AsignacionContenedor> asignaciones = "FIFO".equals(politica)
+                ? politicaFEFO.seleccionarContenedoresEnOrden(contenedoresConStock, linea.getCantidadSolicitada())
+                : politicaFEFO.seleccionarContenedores(contenedoresConStock, linea.getCantidadSolicitada());
 
         BigDecimal totalAsignado = asignaciones.stream()
                 .map(PoliticaFEFO.AsignacionContenedor::cantidad)
@@ -211,6 +219,30 @@ public class PickingServiceImpl implements PickingService {
                     linea.getProductoId(), linea.getCantidadSolicitada(), totalAsignado);
         }
 
+        procesarAsignaciones(orden, linea, asignaciones);
+    }
+
+    /**
+     * Procesa una linea con politica MANUAL: el contenedorId debe venir en la linea.
+     */
+    private void procesarLineaManual(OrdenPicking orden, PickingLinea linea) {
+        if (linea.getContenedorId() == null) {
+            throw new OperacionInvalidaException(String.format(
+                    "Politica MANUAL requiere contenedorId en la linea de producto %d",
+                    linea.getProductoId()));
+        }
+
+        List<PoliticaFEFO.AsignacionContenedor> asignaciones = List.of(
+                new PoliticaFEFO.AsignacionContenedor(linea.getContenedorId(), linea.getCantidadSolicitada()));
+
+        procesarAsignaciones(orden, linea, asignaciones);
+    }
+
+    /**
+     * Procesa asignaciones de contenedores: locks, validacion, operaciones, estado.
+     */
+    private void procesarAsignaciones(OrdenPicking orden, PickingLinea linea,
+                                       List<PoliticaFEFO.AsignacionContenedor> asignaciones) {
         // Ordenar IDs para locks secuenciales
         List<Long> idsOrdenados = asignaciones.stream()
                 .map(PoliticaFEFO.AsignacionContenedor::contenedorId)
@@ -225,7 +257,7 @@ public class PickingServiceImpl implements PickingService {
             contenedoresLocked.add(c);
         }
 
-        // Procesar asignaciones — tomar del primer contenedor FEFO
+        // Procesar asignaciones
         for (PoliticaFEFO.AsignacionContenedor asignacion : asignaciones) {
             Contenedor contenedor = contenedoresLocked.stream()
                     .filter(c -> c.getId().equals(asignacion.contenedorId()))

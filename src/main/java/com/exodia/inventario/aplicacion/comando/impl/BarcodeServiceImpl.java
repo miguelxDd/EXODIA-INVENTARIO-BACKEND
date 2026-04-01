@@ -43,6 +43,14 @@ public class BarcodeServiceImpl implements BarcodeService {
                 .findByEmpresaIdAndPrefijoForUpdate(empresaId, prefijo)
                 .orElseGet(() -> crearSecuencia(empresaId, prefijo));
 
+        // Sincronizar padding con ConfiguracionEmpresa si cambio
+        ConfiguracionEmpresa config = configuracionEmpresaService.obtenerEntidadOCrear(empresaId);
+        if (!secuencia.getLongitudPadding().equals(config.getBarcodeLongitudPadding())) {
+            log.info("Actualizando longitudPadding de secuencia {}/{}: {} -> {}",
+                    empresaId, prefijo, secuencia.getLongitudPadding(), config.getBarcodeLongitudPadding());
+            secuencia.setLongitudPadding(config.getBarcodeLongitudPadding());
+        }
+
         long siguienteValor = secuencia.getUltimoValor() + 1;
         secuencia.setUltimoValor(siguienteValor);
         secuenciaBarcodeRepository.save(secuencia);

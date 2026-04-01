@@ -80,6 +80,42 @@ public class PoliticaFEFO {
     }
 
     /**
+     * Selecciona contenedores para cubrir una cantidad solicitada SIN reordenar.
+     * Respeta el orden en que llegan (util para FIFO, donde el query ya ordena por creado_en ASC).
+     *
+     * @param disponibles contenedores ya ordenados por la query
+     * @param cantidadSolicitada cantidad total a cubrir
+     * @return lista de asignaciones en el orden recibido
+     */
+    public List<AsignacionContenedor> seleccionarContenedoresEnOrden(
+            List<ContenedorConStock> disponibles,
+            BigDecimal cantidadSolicitada) {
+
+        if (disponibles == null || disponibles.isEmpty() || cantidadSolicitada == null
+                || cantidadSolicitada.compareTo(BigDecimal.ZERO) <= 0) {
+            return List.of();
+        }
+
+        var resultado = new java.util.ArrayList<AsignacionContenedor>();
+        BigDecimal pendiente = cantidadSolicitada;
+
+        for (ContenedorConStock c : disponibles) {
+            if (pendiente.compareTo(BigDecimal.ZERO) <= 0) {
+                break;
+            }
+            BigDecimal disponible = c.cantidadDisponible();
+            if (disponible.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            BigDecimal tomar = pendiente.min(disponible);
+            resultado.add(new AsignacionContenedor(c.id(), tomar));
+            pendiente = pendiente.subtract(tomar);
+        }
+
+        return List.copyOf(resultado);
+    }
+
+    /**
      * DTO interno que representa un contenedor con su stock disponible.
      */
     public record ContenedorConStock(

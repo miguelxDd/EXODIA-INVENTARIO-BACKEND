@@ -4,6 +4,8 @@ import com.exodia.inventario.aplicacion.comando.BarcodeService;
 import com.exodia.inventario.aplicacion.comando.LoteService;
 import com.exodia.inventario.aplicacion.comando.OperacionService;
 import com.exodia.inventario.aplicacion.comando.RecepcionService;
+import com.exodia.inventario.domain.modelo.extension.ConfiguracionProducto;
+import com.exodia.inventario.repositorio.extension.ConfiguracionProductoRepository;
 import com.exodia.inventario.domain.enums.EstadoContenedorCodigo;
 import com.exodia.inventario.domain.enums.TipoOperacionCodigo;
 import com.exodia.inventario.domain.enums.TipoRecepcion;
@@ -60,6 +62,7 @@ public class RecepcionServiceImpl implements RecepcionService {
     private final OperacionService operacionService;
     private final BarcodeService barcodeService;
     private final LoteService loteService;
+    private final ConfiguracionProductoRepository configuracionProductoRepository;
     private final RecepcionMapeador recepcionMapeador;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -151,6 +154,29 @@ public class RecepcionServiceImpl implements RecepcionService {
         Long proveedorId = lineaReq.proveedorId() != null ? lineaReq.proveedorId() : proveedorIdHeader;
         BigDecimal precioUnitario = lineaReq.precioUnitario() != null
                 ? lineaReq.precioUnitario() : BigDecimal.ZERO;
+
+        // Validar requisitos de lote/vencimiento/unidadBase segun ConfiguracionProducto
+        configuracionProductoRepository
+                .findByEmpresaIdAndProductoId(empresa.getId(), lineaReq.productoId())
+                .ifPresent(configProd -> {
+                    if (Boolean.TRUE.equals(configProd.getManejaLote())
+                            && (lineaReq.numeroLote() == null || lineaReq.numeroLote().isBlank())) {
+                        throw new OperacionInvalidaException(String.format(
+                                "Producto %d requiere numero de lote segun configuracion", lineaReq.productoId()));
+                    }
+                    if (Boolean.TRUE.equals(configProd.getManejaVencimiento())
+                            && lineaReq.fechaVencimiento() == null) {
+                        throw new OperacionInvalidaException(String.format(
+                                "Producto %d requiere fecha de vencimiento segun configuracion", lineaReq.productoId()));
+                    }
+                    if (configProd.getUnidadBase() != null
+                            && !configProd.getUnidadBase().getId().equals(lineaReq.unidadId())) {
+                        throw new OperacionInvalidaException(String.format(
+                                "Producto %d debe recibirse en unidad base %s (id=%d), se envio unidad %d",
+                                lineaReq.productoId(), configProd.getUnidadBase().getAbreviatura(),
+                                configProd.getUnidadBase().getId(), lineaReq.unidadId()));
+                    }
+                });
 
         // Manejar lote si aplica
         Lote lote = null;

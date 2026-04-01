@@ -1,6 +1,8 @@
 package com.exodia.inventario.aplicacion.consulta.impl;
 
+import com.exodia.inventario.aplicacion.comando.ConfiguracionEmpresaService;
 import com.exodia.inventario.aplicacion.consulta.StockQueryService;
+import com.exodia.inventario.domain.modelo.extension.ConfiguracionEmpresa;
 import com.exodia.inventario.domain.servicio.CalculadorStock;
 import com.exodia.inventario.excepcion.EntidadNoEncontradaException;
 import com.exodia.inventario.repositorio.contenedor.ContenedorRepository;
@@ -30,6 +32,7 @@ public class StockQueryServiceImpl implements StockQueryService {
     private final ContenedorRepository contenedorRepository;
     private final ReservaRepository reservaRepository;
     private final CalculadorStock calculadorStock;
+    private final ConfiguracionEmpresaService configuracionEmpresaService;
 
     @Override
     public BigDecimal obtenerStockContenedor(Long contenedorId) {
@@ -85,6 +88,13 @@ public class StockQueryServiceImpl implements StockQueryService {
                                                                               Long productoId,
                                                                               Long bodegaId) {
         return operacionRepository.findContenedoresDisponiblesFIFO(empresaId, productoId, bodegaId);
+    }
+
+    @Override
+    public List<ContenedorStockProjection> obtenerContenedoresProximosAVencer(Long empresaId, Long bodegaId) {
+        ConfiguracionEmpresa config = configuracionEmpresaService.obtenerEntidadOCrear(empresaId);
+        return operacionRepository.findContenedoresProximosAVencer(
+                empresaId, bodegaId, config.getDiasAlertaVencimiento());
     }
 
     @Override
