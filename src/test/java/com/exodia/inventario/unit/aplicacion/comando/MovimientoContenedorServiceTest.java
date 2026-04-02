@@ -168,7 +168,6 @@ class MovimientoContenedorServiceTest {
     private EstadoContenedor crearEstado(Long id, String codigo) {
         EstadoContenedor estado = EstadoContenedor.builder().codigo(codigo).nombre(codigo).build();
         estado.setId(id);
-        estado.setActivo(true);
         return estado;
     }
 

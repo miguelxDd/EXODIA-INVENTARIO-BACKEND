@@ -9,7 +9,13 @@
       "Bash(cmd.exe:*)",
       "Bash(find:*)",
       "Bash(echo === SERVICE VERIFICATION ===:*)",
-      "Bash(mvn clean:*)"
+      "Bash(mvn clean:*)",
+      "Bash(mkdir -p /mnt/c/Users/migue/Music/inventario/inventario-front/Exodia-inv-front/src/app/features/inventario)",
+      "Bash(mkdir -p /mnt/c/Users/migue/Music/inventario/inventario-front/Exodia-inv-front/src/app/features/catalogos)",
+      "Bash(mkdir -p /mnt/c/Users/migue/Music/inventario/inventario-front/Exodia-inv-front/src/app/features/operaciones)",
+      "Bash(mkdir -p /mnt/c/Users/migue/Music/inventario/inventario-front/Exodia-inv-front/src/app/layout)",
+      "Bash(npx ng:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
